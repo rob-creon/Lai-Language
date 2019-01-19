@@ -73,7 +73,6 @@ class Main {
 		/*************************/
 		/* Load All Source Files */
 		/*************************/
-
 		for (String filename : filenames) {
 			ArrayList<String> list = new ArrayList<String>();
 			System.out.println("Loading file: " + filename + "...");
