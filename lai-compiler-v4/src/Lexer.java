@@ -28,23 +28,6 @@ public class Lexer {
 		}
 	}
 
-	private String getCarrotPointer(int offset) {
-		String s = "";
-		for (int i = 0; i < offset; ++i) {
-			s += " ";
-		}
-		s += "^";
-		return s;
-	}
-
-	public void tokenError(String filename, int lineNumber, int charNumber, String message, String offendingLine) {
-		System.out.println("Error in file '" + filename + "(" + (lineNumber + 1) + ")" + "':");
-		System.out.println("\t" + offendingLine);
-		System.out.println("\t" + getCarrotPointer(charNumber));
-		System.out.println(message);
-		System.out.println("");
-	}
-
 	private static final String numbers = "0123456789";
 	private static final String letters = "abcdefghjiklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_";
 	private static final String alphanumeric = numbers + letters;
@@ -114,7 +97,7 @@ public class Lexer {
 					do {
 						charNumber++;
 						if (charNumber >= line.length()) {
-							this.tokenError(filename, lineNumber, charNumber - 1,
+							Main.error(filename, lineNumber, charNumber - 1,
 									"Unexpected end of line while parsing string literal.", line);
 							break;
 						}
@@ -222,10 +205,10 @@ public class Lexer {
 								possibleOps = oldPossibleOps;
 								opSoFar = opSoFar.substring(0, opSoFar.length() - 1);// remove last char
 								charNumber--;
-								//backup program ctr
+								// backup program ctr
 								break;
 							} else {
-								tokenError(filename, lineNumber, charNumber,
+								Main.error(filename, lineNumber, charNumber,
 										"Can't identify operator '" + opSoFar + "'.", line);
 							}
 						}
@@ -249,7 +232,7 @@ public class Lexer {
 					} while (true);
 					// while (possibleOps.size() > 1);
 					if (possibleOps.size() == 0) {
-						tokenError(filename, lineNumber, charNumber, "Could not parse operator.", line);
+						Main.error(filename, lineNumber, charNumber, "Could not parse operator.", line);
 						continue;
 					}
 					if (possibleOps.size() > 1) {
@@ -264,15 +247,15 @@ public class Lexer {
 							}
 						}
 						// If we reach here without continuing, there was no exact match.
-						this.tokenError(filename, lineNumber, charNumber,
-								"Unexpected end of line while parsing operator.", line);
+						Main.error(filename, lineNumber, charNumber, "Unexpected end of line while parsing operator.",
+								line);
 					}
 					// Now that we've dealt with edge cases, we can just add the operator at
 					// possibleOps[0].
 
 					// Double check they are equal. if they are not then we had a partial match.
 					if (!possibleOps.get(0).name.equals(opSoFar)) {
-						this.tokenError(filename, lineNumber, charNumber, "Incomplete or malformed op '" + opSoFar
+						Main.error(filename, lineNumber, charNumber, "Incomplete or malformed op '" + opSoFar
 								+ "'. Looks similar to: '" + possibleOps.get(0).name + "'.", line);
 						continue;
 					}
@@ -280,7 +263,7 @@ public class Lexer {
 					lexerFile.addToken(new LaiLexer.Token(lineNumber, charNumber, possibleOps.get(0)));
 					continue;
 				} else {
-					tokenError(filename, lineNumber, charNumber, "Could not parse char '" + op + "'.", line);
+					Main.error(filename, lineNumber, charNumber, "Could not parse char '" + op + "'.", line);
 				}
 			}
 		}

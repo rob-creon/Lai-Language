@@ -4,11 +4,52 @@ import java.util.Scanner;
 
 class Main {
 
+	private static String getCarrotPointer(int offset) {
+		String s = "";
+		for (int i = 0; i < offset; ++i) {
+			s += " ";
+		}
+		s += "^";
+		return s;
+	}
+
+	public static void error(String filename, int lineNumber, int charNumber, String message, String offendingLine) {
+		System.out.println("Error in file '" + filename + "(" + (lineNumber + 1) + ")" + "':");
+		System.out.println("\t" + offendingLine);
+		System.out.println("\t" + getCarrotPointer(charNumber));
+		System.out.println(message);
+		System.out.println("");
+	}
+
+	public static void error(String filename, int lineNumber, int charNumber, String message) {
+		// Find file
+		int fileIndex = -1;
+		for (int i = 0; i < filenames.size(); ++i) {
+			String s = filenames.get(i);
+			if (s.equals(filename)) {
+				fileIndex = i;
+				break;
+			}
+		}
+		if (fileIndex == -1) {
+			// This should pretty much never happen for any reason, but you never know.
+			System.out.println("Error in unloaded file: " + filename + "(line=" + (lineNumber + 1) + ", char="
+					+ charNumber + "):\n" + message);
+		}
+		String line = filesContent.get(fileIndex).get(lineNumber);
+		error(filename, lineNumber, charNumber, message, line);
+	}
+
+	static ArrayList<String> flags = new ArrayList<String>();
+	static ArrayList<String> filenames = new ArrayList<String>();
+
+	static ArrayList<ArrayList<String>> filesContent = new ArrayList<>();
+
 	public static void main(String[] args) {
 
-		/**************************************/
+		/********************************/
 		/* Parse Command Line Arguments */
-		/**************************************/
+		/********************************/
 
 		// Verify that a file has been provided as a command line arg.
 		// Other args are a WIP, for now we will just focus on compiling.
@@ -19,8 +60,6 @@ class Main {
 		}
 
 		// Sort the arguments into flags and files.
-		ArrayList<String> flags = new ArrayList<String>();
-		ArrayList<String> filenames = new ArrayList<String>();
 
 		// Flags are anything that begin with a '-'.
 		for (String s : args) {
@@ -34,7 +73,7 @@ class Main {
 		/*************************/
 		/* Load All Source Files */
 		/*************************/
-		ArrayList<ArrayList<String>> filesContent = new ArrayList<>();
+
 		for (String filename : filenames) {
 			ArrayList<String> list = new ArrayList<String>();
 			System.out.println("Loading file: " + filename + "...");
@@ -52,12 +91,12 @@ class Main {
 			filesContent.add(list);
 		}
 
-		/******************************/
+		/************/
 		/* Tokenize */
-		/******************************/
-		
+		/************/
+
 		System.out.println("Tokenizing...");
-		
+
 		Lexer lexer = new Lexer();
 
 		// Pass each file individually
@@ -69,7 +108,7 @@ class Main {
 
 		System.out.println("Tokenized.");
 		// Print the tokens for debugging
-		
+
 		ArrayList<String> fileContents = filesContent.get(0);
 		ArrayList<LaiLexer.Token> tokens = lexer.getFileTokens(filenames.get(0));
 
@@ -107,13 +146,42 @@ class Main {
 		/*********************************/
 		/* Assemble Abstract Syntax Tree */
 		/*********************************/
+		System.out.println("Assembling AST...");
 		ASTAssembler ast = new ASTAssembler();
 		for (int i = 0; i < filenames.size(); ++i) {
 			String filename = filenames.get(i);
-			ArrayList<LaiLexer.Token> fileTokens = lexer.getFileTokens(filename);
+			ArrayList<LaiLexer.Token> fileTokens = new ArrayList<LaiLexer.Token>(lexer.getFileTokens(filename));
 			ast.parseFile(filename, fileTokens);
 		}
+		System.out.println("AST Assembled.");
 
+		if (flags.contains("-ast")) {
+			System.out.println("\nAST:");
+
+			for (String filename : filenames) {
+				System.out.println(filename + ":");
+
+				LaiAST.Node root = ast.getFileAST(filename);
+				System.out.println(getNodeDebugString(root, 1));
+			}
+		}
+	}
+
+	private static String getNodeDebugString(LaiAST.Node node, int recursionDepth) {
+		String out = "";
+		for (Object o : node.children) {
+			if (o instanceof LaiAST.CreateVar) {
+				LaiAST.CreateVar varDef = (LaiAST.CreateVar) o;
+				LaiAST.LaiVariable var = varDef.var;
+				if (var != null)
+					out += getIndents(recursionDepth) + "Create Variable(type=" + var.type.name() + " name=" + var.name
+							+ " value=" + var.value + ")\n";
+				else
+					out += getIndents(recursionDepth) + "Create Variable(null, missing feature in AST. line="
+							+ (varDef.lineNumber + 1) + " char= " + varDef.charNumber + ")\n";
+			}
+		}
+		return out;
 	}
 
 	private static String getIndents(int n) {

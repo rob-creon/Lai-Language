@@ -1,5 +1,12 @@
+
 i := 100
 j : int
+k := i
+
+initthisvartonull : int = ___
+
+thiswillerror : string = 12
+thistoowillerrror : int = "string"
 
 test : string = "Hello, Sailor!"
 
@@ -11,7 +18,7 @@ if (i == j) {
 	print("i is not equal to j.")
 }
 
-if (i != j){
+if (i != j) {
 	print("100 is not equal to 0.")
 }
 
@@ -21,10 +28,10 @@ getMessageFromCipher(secret : string, key : string) : string {
 	output : string
 	
 	for (it :: secret.chars) {
-		assert(key.contains(it), "The secret contains special characters. Can't continue!")
+		assert(alphabet.contains(it), "The secret contains special characters. Can't continue!")
 		
 		index := alphabet.indexOf(it)
-		output += key.chars()[index]
+		output += key.chars[index]
 	}
 	
 	return output

@@ -2,3 +2,7 @@
 /ASTAssembler$ASTFile.class
 /LaiAST$Construct.class
 /LaiAST$IfStatement.class
+/LaiAST$CreateDeclareVar.class
+/LaiAST$CreateVar.class
+/LaiAST$LaiVariable.class
+/LaiAST$LaiType.class

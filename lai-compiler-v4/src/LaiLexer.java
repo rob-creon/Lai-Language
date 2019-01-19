@@ -42,13 +42,16 @@ public class LaiLexer {
 
 		OpBoolEqual("=="), OpBoolNotEqual("!="),
 
-		OpOpenSquare("["), OpCloseSquare("]"), OpOpenBrace("{"), OpCloseBrace("}"), OpOpenParenthesis("("), OpCloseParenthesis(")"), OpComma(","), OpDot("."),
-		
+		OpOpenSquare("["), OpCloseSquare("]"), OpOpenBrace("{"), OpCloseBrace("}"), OpOpenParenthesis("("),
+		OpCloseParenthesis(")"), OpComma(","), OpDot("."),
+
 		OpMathPlus("+"), OpMathMinus("-"), OpMathPlusEquals("+="), OpMathMinusEquals("-="),
-		
+
 		OpListIterate("::"),
 
-		TypeInt("int"), TypeString("string"),
+		TypeInt("int", true), TypeString("string", true),
+		
+		UnitializeValue("___"),
 
 		StatementIf("if"), StatementElse("else"), StatementFor("for"), StatementReturn("return"),
 
@@ -57,9 +60,11 @@ public class LaiLexer {
 		Identifier("#IDENTIFIER");
 
 		public final String name;
+		public final boolean isPrimitiveType;
 
-		private TokenType(String name) {
+		private TokenType(String name, boolean isPrimitive) {
 			this.name = name;
+			isPrimitiveType = isPrimitive;
 			if (name.charAt(0) == '#') {
 				// This is a ValuedToken<T> and cannot be checked by string match.
 			} else if (Lexer.isAlphanumeric(name)) {
@@ -70,6 +75,10 @@ public class LaiLexer {
 				// by name.
 				OPERATOR_TOKENS.add(this);
 			}
+		}
+
+		private TokenType(String name) {
+			this(name, false);
 		}
 	}
 
