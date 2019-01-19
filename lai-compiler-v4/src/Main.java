@@ -53,8 +53,11 @@ class Main {
 		}
 
 		/******************************/
-		/* 			Tokenize		  */
+		/* Tokenize */
 		/******************************/
+		
+		System.out.println("Tokenizing...");
+		
 		Lexer lexer = new Lexer();
 
 		// Pass each file individually
@@ -64,22 +67,60 @@ class Main {
 			lexer.parseFile(filename, fileContents);
 		}
 
+		System.out.println("Tokenized.");
 		// Print the tokens for debugging
-		System.out.println("\nTokens Generated: ");
-		ArrayList<LaiLexer.Token> tokens = lexer.getFileTokens(filenames.get(0));
-		for(int i = 0; i < tokens.size(); i++) {
-			System.out.print(LaiLexer.getConciseDebugString(tokens.get(i)));
-		}
 		
+		ArrayList<String> fileContents = filesContent.get(0);
+		ArrayList<LaiLexer.Token> tokens = lexer.getFileTokens(filenames.get(0));
+
+		if (flags.contains("-token")) {
+			System.out.println("\nTokens: ");
+			int lineNum = 0;
+			int tokenIndex = 0;
+			int futureindent = 0;
+			int currentindent = 0;
+			while (lineNum < fileContents.size()) {
+				String line = "";
+				while (tokens.get(tokenIndex).lineNumber == lineNum) {
+
+					line += "[" + LaiLexer.getDebugString(tokens.get(tokenIndex)) + "]";
+
+					if (LaiLexer.getConciseDebugString(tokens.get(tokenIndex)).equals("{")) {
+						futureindent++;
+					}
+					if (LaiLexer.getConciseDebugString(tokens.get(tokenIndex)).equals("}")) {
+						currentindent--;
+						futureindent--;
+					}
+					tokenIndex++;
+					if (tokenIndex >= tokens.size() - 1) {
+						break;
+					}
+				}
+				System.out.print("\n" + (lineNum + 1) + ":" + getIndents(currentindent) + line);
+				currentindent = futureindent;
+				// futureindent = 0;
+				lineNum++;
+			}
+		}
+
 		/*********************************/
 		/* Assemble Abstract Syntax Tree */
 		/*********************************/
 		ASTAssembler ast = new ASTAssembler();
-		for(int i = 0; i < filenames.size(); ++i) {
+		for (int i = 0; i < filenames.size(); ++i) {
 			String filename = filenames.get(i);
 			ArrayList<LaiLexer.Token> fileTokens = lexer.getFileTokens(filename);
 			ast.parseFile(filename, fileTokens);
 		}
-		
+
+	}
+
+	private static String getIndents(int n) {
+		String out = "";
+		for (int i = 0; i < n; i++) {
+			out += "\t";
+		}
+		return out;
 	}
 }

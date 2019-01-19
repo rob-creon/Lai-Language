@@ -1,25 +1,32 @@
+i := 100
+j : int
 
+test : string = "Hello, Sailor!"
 
-int main() {
-	//Create variables
-	i := 100
-	j : int
+print(test)
 
-	test : string = "Hello, Sailor!"
-
-	print(test)
-
-	if(i == j) {
-		print("Unreachable code.")
-	} else {
-		print("i is not equal to j.")
-	}
-
-	if (i != j){
-		print("100 is not equal to 0.")
-	}
+if (i == j) {
+	print("Unreachable code.")
+} else {
+	print("i is not equal to j.")
 }
 
-getMessage() : string {
-	return "Hello, Sailor!!!\n"
+if (i != j){
+	print("100 is not equal to 0.")
 }
+
+getMessageFromCipher(secret : string, key : string) : string {
+	
+	alphabet := "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+	output : string
+	
+	for (it :: secret.chars) {
+		assert(key.contains(it), "The secret contains special characters. Can't continue!")
+		
+		index := alphabet.indexOf(it)
+		output += key.chars()[index]
+	}
+	
+	return output
+}
+

@@ -42,11 +42,15 @@ public class LaiLexer {
 
 		OpBoolEqual("=="), OpBoolNotEqual("!="),
 
-		OpOpenBrace("{"), OpCloseBrace("}"), OpOpenParenthesis("("), OpCloseParenthesis(")"),
+		OpOpenSquare("["), OpCloseSquare("]"), OpOpenBrace("{"), OpCloseBrace("}"), OpOpenParenthesis("("), OpCloseParenthesis(")"), OpComma(","), OpDot("."),
+		
+		OpMathPlus("+"), OpMathMinus("-"), OpMathPlusEquals("+="), OpMathMinusEquals("-="),
+		
+		OpListIterate("::"),
 
 		TypeInt("int"), TypeString("string"),
 
-		StatementIf("if"), StatementElse("else"),
+		StatementIf("if"), StatementElse("else"), StatementFor("for"), StatementReturn("return"),
 
 		StringLiteral("#STRING_LITERAL"), IntegerLiteral("#INTEGER_LITERAL"),
 

@@ -1,6 +1,5 @@
 import java.util.ArrayList;
 
-
 public class Lexer {
 
 	private class LexerFile {
@@ -23,8 +22,9 @@ public class Lexer {
 	public Lexer() {
 		files = new ArrayList<LexerFile>();
 		ArrayList<LaiLexer.TokenType> types = new ArrayList<LaiLexer.TokenType>();
-		for(LaiLexer.TokenType t : LaiLexer.TokenType.values()) {
-			types.add(t); //inits the token type so it is added to the proper indexing lists
+		for (LaiLexer.TokenType t : LaiLexer.TokenType.values()) {
+			types.add(t); // inits the token type so it is added to the proper indexing lists
+			// System.out.println("Initing type: " + t.name);
 		}
 	}
 
@@ -51,7 +51,7 @@ public class Lexer {
 
 	private static final String whitespace = " \n\r\t";
 
-	private static final String operators = "!@#$%^&*(){}[]:;<>,./\\=";
+	private static final String operators = "+-!@#$%^&*(){}[]:;<>,./\\=";
 
 	public static boolean isOperator(char c) {
 		return operators.indexOf(c) != -1;
@@ -96,7 +96,7 @@ public class Lexer {
 				if (isWhitespace(op)) {
 					continue letterLoop;
 				}
-				
+
 				if (op == '/') {
 					if (line.length() > charNumber + 1) {
 						if (line.charAt(charNumber + 1) == '/') {
@@ -202,8 +202,10 @@ public class Lexer {
 					ArrayList<LaiLexer.TokenType> possibleOps = new ArrayList<LaiLexer.TokenType>();
 					String opSoFar = "" + op;
 					int offset = 0;
+					ArrayList<LaiLexer.TokenType> oldPossibleOps;
 					opLoop: do {
 						// Find possible operators
+						oldPossibleOps = new ArrayList<>(possibleOps);
 						possibleOps.clear();
 						for (LaiLexer.TokenType t : LaiLexer.OPERATOR_TOKENS) {
 							if (t.name.length() > offset) {
@@ -215,10 +217,18 @@ public class Lexer {
 								}
 							}
 						}
-						if(possibleOps.size() == 1) {
-							break;
+						if (possibleOps.size() == 0) {
+							if (oldPossibleOps.size() == 1) {
+								possibleOps = oldPossibleOps;
+								opSoFar = opSoFar.substring(0, opSoFar.length() - 1);// remove last char
+								charNumber--;
+								//backup program ctr
+								break;
+							} else {
+								tokenError(filename, lineNumber, charNumber,
+										"Can't identify operator '" + opSoFar + "'.", line);
+							}
 						}
-
 						offset++;
 						charNumber++;
 
@@ -228,19 +238,7 @@ public class Lexer {
 						}
 
 						op = line.charAt(charNumber);
-						// Skip whitespace.
-						while (isWhitespace(op)) {
-							// offset++; We don't increment the offset because the offset is used for
-							// checking against the definition of the operator in the Lai.TokenType enum.
-							charNumber++;
 
-							// Double check we haven't reached end of line. If we have, this is the end of
-							// the op.
-							if (charNumber >= line.length()) {
-								break opLoop;
-							}
-							op = line.charAt(charNumber);
-						}
 						if (!isOperator(op)) {
 							// End of Operator!
 							charNumber--;
@@ -248,7 +246,8 @@ public class Lexer {
 						}
 
 						opSoFar += op;
-					} while (possibleOps.size() > 1);
+					} while (true);
+					// while (possibleOps.size() > 1);
 					if (possibleOps.size() == 0) {
 						tokenError(filename, lineNumber, charNumber, "Could not parse operator.", line);
 						continue;
@@ -270,10 +269,18 @@ public class Lexer {
 					}
 					// Now that we've dealt with edge cases, we can just add the operator at
 					// possibleOps[0].
+
+					// Double check they are equal. if they are not then we had a partial match.
+					if (!possibleOps.get(0).name.equals(opSoFar)) {
+						this.tokenError(filename, lineNumber, charNumber, "Incomplete or malformed op '" + opSoFar
+								+ "'. Looks similar to: '" + possibleOps.get(0).name + "'.", line);
+						continue;
+					}
+
 					lexerFile.addToken(new LaiLexer.Token(lineNumber, charNumber, possibleOps.get(0)));
 					continue;
 				} else {
-					tokenError(filename, lineNumber, charNumber, "Could not parse.", line);
+					tokenError(filename, lineNumber, charNumber, "Could not parse char '" + op + "'.", line);
 				}
 			}
 		}
