@@ -159,7 +159,7 @@ class Main {
 			System.out.println("\nAST:");
 
 			for (String filename : filenames) {
-				System.out.println(filename + ":");
+				System.out.println(filename + ":\n");
 
 				LaiAST.Node root = ast.getFileAST(filename);
 				System.out.println(getNodeDebugString(root, 1));
@@ -169,17 +169,9 @@ class Main {
 
 	private static String getNodeDebugString(LaiAST.Node node, int recursionDepth) {
 		String out = "";
-		for (Object o : node.children) {
-			if (o instanceof LaiAST.CreateVar) {
-				LaiAST.CreateVar varDef = (LaiAST.CreateVar) o;
-				LaiAST.LaiVariable var = varDef.var;
-				if (var != null)
-					out += getIndents(recursionDepth) + "Create Variable(type=" + var.type.name() + " name=" + var.name
-							+ " value=" + var.value + ")\n";
-				else
-					out += getIndents(recursionDepth) + "Create Variable(null, missing feature in AST. line="
-							+ (varDef.lineNumber + 1) + " char= " + varDef.charNumber + ")\n";
-			}
+		out += getIndents(recursionDepth - 1) + "" + node.getNodeName() + "\n";
+		for (LaiAST.Node o : node.children) {
+			out += getNodeDebugString(o, recursionDepth + 1);
 		}
 		return out;
 	}

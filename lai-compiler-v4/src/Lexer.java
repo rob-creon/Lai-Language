@@ -34,7 +34,7 @@ public class Lexer {
 
 	private static final String whitespace = " \n\r\t";
 
-	private static final String operators = "+-!@#$%^&*(){}[]:;<>,./\\=";
+	private static final String operators = "+-?!@#$%^&*(){}[]:;<>,./\\=";
 
 	public static boolean isOperator(char c) {
 		return operators.indexOf(c) != -1;
@@ -186,7 +186,7 @@ public class Lexer {
 					String opSoFar = "" + op;
 					int offset = 0;
 					ArrayList<LaiLexer.TokenType> oldPossibleOps;
-					opLoop: do {
+					do {
 						// Find possible operators
 						oldPossibleOps = new ArrayList<>(possibleOps);
 						possibleOps.clear();

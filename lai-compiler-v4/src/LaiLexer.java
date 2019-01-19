@@ -50,21 +50,24 @@ public class LaiLexer {
 		OpListIterate("::"),
 
 		TypeInt("int", true), TypeString("string", true),
-		
-		UnitializeValue("___"),
+
+		UnitializeValue("?"),
 
 		StatementIf("if"), StatementElse("else"), StatementFor("for"), StatementReturn("return"),
 
-		StringLiteral("#STRING_LITERAL"), IntegerLiteral("#INTEGER_LITERAL"),
+		StringLiteral("#STRING_LITERAL", TokenType.TypeString), IntegerLiteral("#INTEGER_LITERAL", TokenType.TypeInt),
 
 		Identifier("#IDENTIFIER");
 
 		public final String name;
 		public final boolean isPrimitiveType;
+		public final TokenType laiType;
 
-		private TokenType(String name, boolean isPrimitive) {
+		private TokenType(String name, boolean isPrimitive, TokenType type) {
 			this.name = name;
-			isPrimitiveType = isPrimitive;
+			this.isPrimitiveType = isPrimitive;
+			this.laiType = type;
+
 			if (name.charAt(0) == '#') {
 				// This is a ValuedToken<T> and cannot be checked by string match.
 			} else if (Lexer.isAlphanumeric(name)) {
@@ -78,7 +81,15 @@ public class LaiLexer {
 		}
 
 		private TokenType(String name) {
-			this(name, false);
+			this(name, false, null);
+		}
+
+		private TokenType(String name, boolean isPrimitive) {
+			this(name, true, null);
+		}
+
+		private TokenType(String name, TokenType laiType) {
+			this(name, false, laiType);
 		}
 	}
 

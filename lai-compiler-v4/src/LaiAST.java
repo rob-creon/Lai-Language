@@ -2,14 +2,32 @@ import java.util.ArrayList;
 
 public class LaiAST {
 
-	public static class Node {
+	public abstract static class Node {
 		public int lineNumber, charNumber;
-		public ArrayList<Object> children = new ArrayList<Object>();
+		public ArrayList<Node> children = new ArrayList<Node>();
 
 		public Node(int lineNumber, int charNumber) {
 			this.lineNumber = lineNumber;
 			this.charNumber = charNumber;
 		}
+
+		public abstract String getNodeName();
+	}
+
+	public static class FileNode extends Node {
+
+		public final String filename;
+
+		public FileNode(String filename) {
+			super(0, 0);
+			this.filename = filename;
+		}
+
+		@Override
+		public String getNodeName() {
+			return "FileRoot(" + filename + ")";
+		}
+
 	}
 
 	public static enum LaiType {
@@ -39,14 +57,19 @@ public class LaiAST {
 		return null;
 	}
 
-	public static class LaiVariable<T> {
+	public static class LaiVariable extends Node {
 		public final String name;
 		public final LaiType type;
-		public T value;
 
-		public LaiVariable(String name, LaiType type) {
+		public LaiVariable(int lineNumber, int charNumber, String name, LaiType type) {
+			super(lineNumber, charNumber);
 			this.name = name;
 			this.type = type;
+		}
+
+		@Override
+		public String getNodeName() {
+			return "Var(" + name + " : " + type + ")";
 		}
 	}
 
@@ -57,6 +80,70 @@ public class LaiAST {
 		public CreateVar(int lineNumber, int charNumber, LaiVariable var) {
 			super(lineNumber, charNumber);
 			this.var = var;
+
+			this.children.add(var);
+		}
+
+		@Override
+		public String getNodeName() {
+			return "CreateVar";
+		}
+	}
+
+	public static class SetVar extends Node {
+		public final LaiVariable var;
+		public Node value;
+
+		public SetVar(int lineNumber, int charNumber, LaiVariable var, Node value) {
+			super(lineNumber, charNumber);
+			this.var = var;
+			this.value = value;
+
+			this.children.add(var);
+			this.children.add(value);
+		}
+
+		@Override
+		public String getNodeName() {
+			return "SetVar";
+		}
+	}
+
+	public static class StringLiteral extends Node {
+		public final String value;
+
+		public StringLiteral(int lineNumber, int charNumber, LaiLexer.StringLiteral value) {
+			super(lineNumber, charNumber);
+			this.value = value.value;
+		}
+
+		public StringLiteral(int lineNumber, int charNumber, String value) {
+			super(lineNumber, charNumber);
+			this.value = value;
+		}
+
+		@Override
+		public String getNodeName() {
+			return "StringLiteral(\"" + value + "\")";
+		}
+	}
+
+	public static class IntegerLiteral extends Node {
+		public final int value;
+
+		public IntegerLiteral(int lineNumber, int charNumber, LaiLexer.IntegerLiteral value) {
+			super(lineNumber, charNumber);
+			this.value = value.value;
+		}
+
+		public IntegerLiteral(int lineNumber, int charNumber, int value) {
+			super(lineNumber, charNumber);
+			this.value = value;
+		}
+
+		@Override
+		public String getNodeName() {
+			return "IntegerLiteral(" + value + ")";
 		}
 	}
 

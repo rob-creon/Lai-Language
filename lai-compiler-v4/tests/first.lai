@@ -3,10 +3,10 @@ i := 100
 j : int
 k := i
 
-initthisvartonull : int = ___
+initthisvartonull : int = ?
 
-thiswillerror : string = 12
-thistoowillerrror : int = "string"
+//thiswillerror : string = 12
+//thistoowillerrror : int = "string"
 
 test : string = "Hello, Sailor!"
 
