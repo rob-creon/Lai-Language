@@ -1,0 +1,19 @@
+//Create variables
+i := 100
+j : int
+
+test : string = "Hello, Sailor!"
+
+print(test)
+
+if(i == j) {
+	print("Unreachable code.")
+}
+
+if (i != j){
+	print("100 is not equal to 0.")
+}
+
+getMessage() : string {
+	return "Hello, Sailor!!!\n"
+}
