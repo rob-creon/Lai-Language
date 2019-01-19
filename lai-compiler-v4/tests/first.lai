@@ -1,17 +1,23 @@
-//Create variables
-i := 100
-j : int
 
-test : string = "Hello, Sailor!"
 
-print(test)
+int main() {
+	//Create variables
+	i := 100
+	j : int
 
-if(i == j) {
-	print("Unreachable code.")
-}
+	test : string = "Hello, Sailor!"
 
-if (i != j){
-	print("100 is not equal to 0.")
+	print(test)
+
+	if(i == j) {
+		print("Unreachable code.")
+	} else {
+		print("i is not equal to j.")
+	}
+
+	if (i != j){
+		print("100 is not equal to 0.")
+	}
 }
 
 getMessage() : string {

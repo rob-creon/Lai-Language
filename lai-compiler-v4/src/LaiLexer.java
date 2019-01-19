@@ -3,7 +3,7 @@ import java.util.ArrayList;
 public class LaiLexer {
 
 	public static String getDebugString(Token t) {
-		String message = t.type.name();
+		String message = t.type.name(); // name() is the enum name.
 		if (t instanceof LaiLexer.StringLiteral) {
 			message += ": " + ((LaiLexer.StringLiteral) t).value;
 		}
@@ -18,17 +18,20 @@ public class LaiLexer {
 		return message;
 	}
 
-	public static ArrayList<TokenType> BASIC_TOKENS = new ArrayList<TokenType>();
-	public static ArrayList<TokenType> OPERATOR_TOKENS = new ArrayList<TokenType>();
-
-	// If directly identifiable tokentype is available, return it.
-	public static TokenType getTokenDirect(String s) {
-		for (TokenType t : BASIC_TOKENS) {
-			if (t.name.equals(s)) {
-				return t;
-			}
+	public static String getConciseDebugString(Token t) {
+		String message = t.type.name; // .name is the field name.
+		if (t instanceof LaiLexer.StringLiteral) {
+			message = ((LaiLexer.StringLiteral) t).value;
 		}
-		return TokenType.UnknownToken;
+
+		if (t instanceof LaiLexer.IntegerLiteral) {
+			message = "" + ((LaiLexer.IntegerLiteral) t).value;
+		}
+
+		if (t instanceof LaiLexer.Identifier) {
+			message = ((LaiLexer.Identifier) t).value;
+		}
+		return message;
 	}
 
 	public static enum TokenType {
@@ -42,6 +45,8 @@ public class LaiLexer {
 		OpOpenBrace("{"), OpCloseBrace("}"), OpOpenParenthesis("("), OpCloseParenthesis(")"),
 
 		TypeInt("int"), TypeString("string"),
+
+		StatementIf("if"), StatementElse("else"),
 
 		StringLiteral("#STRING_LITERAL"), IntegerLiteral("#INTEGER_LITERAL"),
 
@@ -57,10 +62,24 @@ public class LaiLexer {
 				// This is a normal token, so its name can be used to find it.
 				BASIC_TOKENS.add(this);
 			} else {
-				// This is an operator token, so we can put it in the list for parsing operators by name.
+				// This is an operator token, so we can put it in the list for parsing operators
+				// by name.
 				OPERATOR_TOKENS.add(this);
 			}
 		}
+	}
+
+	public static ArrayList<TokenType> BASIC_TOKENS = new ArrayList<TokenType>();
+	public static ArrayList<TokenType> OPERATOR_TOKENS = new ArrayList<TokenType>();
+
+	// If directly identifiable tokentype is available, return it.
+	public static TokenType getTokenDirect(String s) {
+		for (TokenType t : BASIC_TOKENS) {
+			if (t.name.equals(s)) {
+				return t;
+			}
+		}
+		return TokenType.UnknownToken;
 	}
 
 	public static class Token {
@@ -74,6 +93,7 @@ public class LaiLexer {
 			this.lineNumber = lineNumber;
 			this.charNumber = charNumber;
 			this.type = type;
+
 		}
 
 	}

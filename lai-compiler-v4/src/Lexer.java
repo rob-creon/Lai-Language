@@ -1,5 +1,6 @@
 import java.util.ArrayList;
 
+
 public class Lexer {
 
 	private class LexerFile {
@@ -14,7 +15,6 @@ public class Lexer {
 
 		public void addToken(LaiLexer.Token t) {
 			tokens.add(t);
-			// System.out.println("TOKEN: " + Lai.getDebugString(t));
 		}
 	}
 
@@ -22,6 +22,10 @@ public class Lexer {
 
 	public Lexer() {
 		files = new ArrayList<LexerFile>();
+		ArrayList<LaiLexer.TokenType> types = new ArrayList<LaiLexer.TokenType>();
+		for(LaiLexer.TokenType t : LaiLexer.TokenType.values()) {
+			types.add(t); //inits the token type so it is added to the proper indexing lists
+		}
 	}
 
 	private String getCarrotPointer(int offset) {
@@ -88,13 +92,11 @@ public class Lexer {
 			letterLoop: for (int charNumber = 0; charNumber < line.length(); ++charNumber) {
 				char op = line.charAt(charNumber);
 
-				// System.out.println("parsing (" + lineNumber + ", " + charNumber + ")=" + op);
-
 				// Ignore Whitespace
 				if (isWhitespace(op)) {
 					continue letterLoop;
 				}
-
+				
 				if (op == '/') {
 					if (line.length() > charNumber + 1) {
 						if (line.charAt(charNumber + 1) == '/') {
@@ -108,8 +110,6 @@ public class Lexer {
 				// Check if it is the beginning of a string literal
 				if (op == '"') {
 
-					// System.out.println("Found string.");
-
 					String literalValue = "";
 					do {
 						charNumber++;
@@ -119,7 +119,6 @@ public class Lexer {
 							break;
 						}
 						op = line.charAt(charNumber);
-						// System.out.println("string op = '" + op + "'");
 						if (op != '\"')
 							literalValue += op;
 					} while (op != '"');
@@ -150,7 +149,7 @@ public class Lexer {
 					char lookAheadChar = op;
 					int lookAheadIndex = charNumber;
 					String word = "";
-					while (!isWhitespace(lookAheadChar)) {
+					while (isAlphanumeric(lookAheadChar)) {
 						word += lookAheadChar;
 
 						lookAheadIndex++;
@@ -210,19 +209,14 @@ public class Lexer {
 							if (t.name.length() > offset) {
 								// String.substring(i, e). first index inclusive, second index exclusive.
 								String check = t.name.substring(0, offset + 1);
-//								System.out.println(
-//										"Checking: '" + check + "' against '" + opSoFar + "' from '" + t.name + "'.");
+
 								if (check.equals(opSoFar)) {
-									// System.out.println("Found match: '" + t.name + "'.");
 									possibleOps.add(t);
 								}
-
 							}
 						}
-
-						// dbg print possible ops
-						for (int i = 0; i < possibleOps.size(); ++i) {
-							// System.out.println(possibleOps.get(i).name);
+						if(possibleOps.size() == 1) {
+							break;
 						}
 
 						offset++;

@@ -52,7 +52,9 @@ class Main {
 			filesContent.add(list);
 		}
 
-		// Pass to lexer
+		/******************************/
+		/* 			Tokenize		  */
+		/******************************/
 		Lexer lexer = new Lexer();
 
 		// Pass each file individually
@@ -65,11 +67,19 @@ class Main {
 		// Print the tokens for debugging
 		System.out.println("\nTokens Generated: ");
 		ArrayList<LaiLexer.Token> tokens = lexer.getFileTokens(filenames.get(0));
-		for (int i = 0; i < tokens.size(); ++i) {
-
-			LaiLexer.Token t = tokens.get(i);
-		
-			System.out.println(LaiLexer.getDebugString(t));
+		for(int i = 0; i < tokens.size(); i++) {
+			System.out.print(LaiLexer.getConciseDebugString(tokens.get(i)));
 		}
+		
+		/*********************************/
+		/* Assemble Abstract Syntax Tree */
+		/*********************************/
+		ASTAssembler ast = new ASTAssembler();
+		for(int i = 0; i < filenames.size(); ++i) {
+			String filename = filenames.get(i);
+			ArrayList<LaiLexer.Token> fileTokens = lexer.getFileTokens(filename);
+			ast.parseFile(filename, fileTokens);
+		}
+		
 	}
 }
