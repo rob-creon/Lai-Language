@@ -161,8 +161,8 @@ public class AST {
 
 			node_children.add(identifier);
 			node_children.add(type);
-			node_children.add(contents);
 			node_children.add(params);
+			node_children.add(contents);
 		}
 
 		@Override

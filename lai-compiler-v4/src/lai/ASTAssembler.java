@@ -44,11 +44,10 @@ public class ASTAssembler {
 		return true;
 	}
 
-	private LaiContents parseContent(String filename, ArrayList<LaiLexer.Token> tokens) {
+	private void parseVariablesAndFunctionsToContent(String filename, ArrayList<LaiLexer.Token> tokens,
+			LaiContents contents) {
 		this.tokens = tokens;
 		this.filename = filename;
-
-		LaiContents contents = new LaiContents();
 
 		// First pass we are searching for functions and variables.
 		tokenLoop: for (tokenCTR = 0; nextToken() != TokenContext.END;) {
@@ -64,6 +63,10 @@ public class ASTAssembler {
 
 				if (!safeNextToken())
 					continue;
+
+				/*****************************************************************************
+				 * * * * * * * * * * * * * * * * * * FUNCTION * * * * * * * * * * * * * * * *
+				 *****************************************************************************/
 
 				if (token.type == LaiLexer.TokenType.OpOpenParenthesis) {
 					// This is some kind of function, either a definition or a function call.
@@ -90,6 +93,9 @@ public class ASTAssembler {
 						continue;
 					}
 
+					/*****************************************************************************
+					 * * * * * * * * * * * * * * * FUNCTION DEFINITION * * * * * * * * * * * * * *
+					 *****************************************************************************/
 					if (lookAheadToken.type == LaiLexer.TokenType.OpOpenBrace) {
 						// Yep, this is a function definition.
 
@@ -180,7 +186,7 @@ public class ASTAssembler {
 
 						LaiFunction function = new LaiFunction(new LaiIdentifier(ident.value), parameters,
 								funcReturnType);
-						contents.addChild(function);
+						contents.functions.addChild(function);
 
 						// Now we need to handle the function body, as that will be assembled to AST
 						// once we have found all function and variable definitions. We should add it to
@@ -234,16 +240,94 @@ public class ASTAssembler {
 						}
 
 					} else {
-						// This must be a function call.
-						// TODO
+						/*****************************************************************************
+						 * * * * * * * * * * * * * * * * FUNCTION CALL * * * * * * * * * * * * * * * *
+						 *****************************************************************************/
+						// TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO
 					}
 
+				} else if (token.type == LaiLexer.TokenType.OpInferTypeAssignValue) {
+					/*****************************************************************************
+					 * * * * * * * * * *VARIABLE DECLARATION & DEFINITION INFER TYPE * * * * * * *
+					 *****************************************************************************/
+
+					// We don't do type inferencing in this section, because all we are doing is
+					// finding variable and function declarations. What we will do is split "name :=
+					// value" into "name : unknown; name = value"; and parse it, leaving it's type
+					// as unknown for now. Type inferencing will be done when we parse statements.
+
+					// We need to remember to parse := as = in the statements section.
+					// Effectively this is what the compiler does:
+
+					/*- source.lai:
+					 * 
+					 * 		foo := "foobar"
+					 * 		//Other code
+					 * 
+					 * compiled (somewhere in program memory somehow):
+					 * 
+					 * 		<variables>                           [change to string!]
+					 * 			foo	: unknowntype <----------------------------------------------]
+					 * 		<functions>                                                          |
+					 * 			...                                                              |
+					 * 		<statements>                                                         |
+					 * 			foo = "foobar" //statements parser will first infer the type of foo
+					 * 
+					 */
+
+					// All we have to do is add a var with unknown type.
+					contents.variables.addChild(
+							new LaiVariable(new LaiIdentifier(ident.value), new LaiType(LaiType.Type.LaiTypeUnknown)));
+				} else if (token.type == LaiLexer.TokenType.OpTypeDec) {
+					/*****************************************************************************
+					 * * * * * * * * * * * *VARIABLE DECLARATION EXPLICIT TYPE * * * * * * * * * *
+					 *****************************************************************************/
+
+					// Similarly to with :=, in the statement parse we will need to parse
+					// "foo : type = value" as "foo : type; foo = value;".
+
+					// We're currently on the ':' so lets move on to the type
+					if (!safeNextToken())
+						continue tokenLoop;
+
+					// Double check this is a type
+					if (!token.type.isPrimitiveType) {
+						Main.error(filename, token.lineNumber, token.charNumber,
+								"Expected a type, but got '" + token.type.name + " instead.");
+					}
+					LaiType varType = LaiType.convertLexerTypeToLaiType(token);
+					LaiVariable var = new LaiVariable(new LaiIdentifier(ident.value), varType);
+					contents.variables.addChild(var);
+
+					// Check that the rest of the line is valid syntax.
+					if (nextToken() == TokenContext.END) {
+						Main.error(filename, token.lineNumber, token.charNumber, "Unexpected end of file.");
+					}
+
+					// This should now either be a ';' or '=' operator.
+					if (token.type == LaiLexer.TokenType.OpSemicolon
+							|| token.type == LaiLexer.TokenType.OpAssignValue) {
+						// Nice, we're good.
+					} else {
+						// Uhoh
+						Main.error(filename, token.lineNumber, token.charNumber,
+								"Expected either a ; or =, but found " + token.type.name + " instead.");
+						continue tokenLoop;
+					}
 				} else {
-					Main.error(filename, token.lineNumber, token.charNumber, "Identifier can not stand alone.");
 					continue;
 				}
 			}
 		}
+	}
+
+	private LaiContents parseContent(String filename, ArrayList<LaiLexer.Token> tokens) {
+		this.tokens = tokens;
+		this.filename = filename;
+
+		LaiContents contents = new LaiContents();
+
+		this.parseVariablesAndFunctionsToContent(filename, tokens, contents);
 
 		return contents;
 	}

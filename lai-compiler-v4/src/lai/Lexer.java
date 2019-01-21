@@ -2,6 +2,8 @@ package lai;
 
 import java.util.ArrayList;
 
+import lai.LaiLexer.Token;
+
 public class Lexer {
 
 	private class LexerFile {
@@ -70,6 +72,12 @@ public class Lexer {
 	public void parseFile(String filename, ArrayList<String> fileContents) {
 		LexerFile lexerFile = new LexerFile(filename);
 		files.add(lexerFile);
+
+		// add a buffer to beginning of file to prevent any off by 1 errors with parsing
+		// wrong in the ast
+		lexerFile.addToken(new LaiLexer.Token(0, 0, LaiLexer.TokenType.OpSemicolon));
+		lexerFile.addToken(new LaiLexer.Token(0, 0, LaiLexer.TokenType.OpSemicolon));
+		lexerFile.addToken(new LaiLexer.Token(0, 0, LaiLexer.TokenType.OpSemicolon));
 
 		// Standard Line by Line, Letter by Letter loop.
 		for (int lineNumber = 0; lineNumber < fileContents.size(); ++lineNumber) {

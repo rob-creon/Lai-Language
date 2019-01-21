@@ -114,39 +114,42 @@ public class Main {
 		System.out.println("Tokenized.");
 		// Print the tokens for debugging
 
-		ArrayList<String> fileContents = filesContent.get(0);
-		ArrayList<LaiLexer.Token> tokens = lexer.getFileTokens(filenames.get(0));
-
 		if (flags.contains("-token")) {
 			System.out.println("\nTokens: ");
-			int lineNum = 0;
-			int tokenIndex = 0;
-			int futureindent = 0;
-			int currentindent = 0;
-			while (lineNum < fileContents.size()) {
-				String line = "";
-				while (tokens.get(tokenIndex).lineNumber == lineNum) {
 
-					line += "[" + LaiLexer.getDebugString(tokens.get(tokenIndex)) + "]";
+			for (int i = 0; i < filenames.size(); ++i) {
+				System.out.println("\n" + filenames.get(i) + ": ");
+				ArrayList<String> fileContents = filesContent.get(i);
+				ArrayList<LaiLexer.Token> tokens = lexer.getFileTokens(filenames.get(i));
+				int lineNum = 0;
+				int tokenIndex = 0;
+				int futureindent = 0;
+				int currentindent = 0;
+				while (lineNum < fileContents.size()) {
+					String line = "";
+					while (tokens.get(tokenIndex).lineNumber == lineNum) {
 
-					if (LaiLexer.getConciseDebugString(tokens.get(tokenIndex)).equals("{")) {
-						futureindent++;
+						line += "[" + LaiLexer.getDebugString(tokens.get(tokenIndex)) + "]";
+
+						if (LaiLexer.getConciseDebugString(tokens.get(tokenIndex)).equals("{")) {
+							futureindent++;
+						}
+						if (LaiLexer.getConciseDebugString(tokens.get(tokenIndex)).equals("}")) {
+							currentindent--;
+							futureindent--;
+						}
+						tokenIndex++;
+						if (tokenIndex >= tokens.size()) {
+							break;
+						}
 					}
-					if (LaiLexer.getConciseDebugString(tokens.get(tokenIndex)).equals("}")) {
-						currentindent--;
-						futureindent--;
-					}
-					tokenIndex++;
-					if (tokenIndex >= tokens.size()) {
-						break;
-					}
+					System.out.print("\n" + (lineNum + 1) + ":" + getIndents(currentindent) + line);
+					currentindent = futureindent;
+
+					lineNum++;
 				}
-				System.out.print("\n" + (lineNum + 1) + ":" + getIndents(currentindent) + line);
-				currentindent = futureindent;
-				// futureindent = 0;
-				lineNum++;
+				System.out.print("\n\n");
 			}
-			System.out.print("\n\n");
 		}
 
 		if (compilerErrors > 0) {
@@ -159,13 +162,19 @@ public class Main {
 
 		System.out.println("Assembling AST...");
 		ASTAssembler ast = new ASTAssembler();
-		ast.assembleFile(filenames.get(0), tokens);
+		for (int i = 0; i < filenames.size(); ++i) {
+			ast.assembleFile(filenames.get(i), lexer.getFileTokens(filenames.get(i)));
+		}
 		System.out.println("AST assembled.");
 
 		if (flags.contains("-ast")) {
 			System.out.println("\nAST:\n");
-			AST.LaiFile file = ast.files.get(0);
-			System.out.println(file.getDebugString(0));
+			for (int i = 0; i < filenames.size(); ++i) {
+				AST.LaiFile file = ast.files.get(i);
+				System.out.println(file.getDebugString(0));
+
+			}
+
 		}
 
 		if (compilerErrors > 0) {

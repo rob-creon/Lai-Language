@@ -3,7 +3,7 @@ i := 100
 blah := 100 + 10
 
 j : int
-k := i + 10
+k := blah + 10
 
 initthisvartonull : int = ?
 
@@ -30,6 +30,13 @@ getMessageFromCipher(secret : string, key : string) : string {
 	output : string
 	
 	for (it :: secret.chars) {
+		
+		//If we encounter a space, skip it.
+		if (it == ' ') {
+			output += ' '
+			continue
+		}
+		
 		assert(alphabet.contains(it), "The secret contains special characters. Can't continue!")
 		
 		index := alphabet.indexOf(it)
@@ -39,3 +46,7 @@ getMessageFromCipher(secret : string, key : string) : string {
 	return output
 }
 
+msg_encoded := "ZM LEVIOB ZNYRGRLFH ZGGVNKG GL RNKILEV XKK NZWV NZRMOB ULI VWFXZGRLMZO KFIKLHVH XLNKROVH GL XKK"
+msg_key := "ZYXWVUTSRQPONMLKJIHGFEDCBA"
+
+print(getMessageFromCipher(msg_encoded, msg_key))

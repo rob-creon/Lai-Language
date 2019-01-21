@@ -1,5 +1,5 @@
 //Function for decoding Alphabetical Substitutions
-def(var : string, var2 : int) : string {
+def(var : string, var2 : int) : string { 
 	print(var)
 }
 
@@ -27,6 +27,12 @@ getMessageFromCipher(secret : string, key : string) : string {
 	
 	return output
 }
+test : string
+
+robust : string
+robust = "that was hard."
+
+alsorobust : string = "that was easy. jk that was also hard."
 
 msg_encoded := "ZM LEVIOB ZNYRGRLFH ZGGVNKG GL RNKILEV XKK NZWV NZRMOB ULI VWFXZGRLMZO KFIKLHVH XLNKROVH GL XKK"
 msg_key := "ZYXWVUTSRQPONMLKJIHGFEDCBA"
