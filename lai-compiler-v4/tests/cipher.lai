@@ -1,7 +1,11 @@
 //Function for decoding Alphabetical Substitutions
-dummy(; )
+def(var : string, var2 : int) : string {
+	print(var)
+}
 
 getMessageFromCipher(secret : string, key : string) : string {
+	
+	thisShouldntBeAFunction() : string {}
 	
 	alphabet := "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 	output : string

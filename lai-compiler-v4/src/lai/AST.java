@@ -146,6 +146,8 @@ public class AST {
 		public LaiType returnType;
 		public LaiContents contents;
 
+		public ArrayList<LaiLexer.Token> bodyTokens = new ArrayList<LaiLexer.Token>();
+
 		public LaiFunction(LaiIdentifier identifier, LaiList<LaiVariable> params, LaiType type) {
 			this(identifier, params, type, new LaiContents());
 

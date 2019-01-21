@@ -150,9 +150,12 @@ public class Main {
 		}
 
 		if (compilerErrors > 0) {
-			System.out.println("Can not continue compilation until errors are fixed.");
-			System.exit(0);
+			cancelWithErrors(compilerErrors);
 		}
+
+		/*********************************/
+		/* Assemble Abstract Syntax Tree */
+		/*********************************/
 
 		System.out.println("Assembling AST...");
 		ASTAssembler ast = new ASTAssembler();
@@ -165,31 +168,15 @@ public class Main {
 			System.out.println(file.getDebugString(0));
 		}
 
-		/*********************************/
-		/* Assemble Abstract Syntax Tree */
-		/*********************************/
-		/*
-		 * System.out.println("Assembling AST..."); ASTAssembler ast = new
-		 * ASTAssembler(); for (int i = 0; i < filenames.size(); ++i) { String filename
-		 * = filenames.get(i); ArrayList<LaiLexer.Token> fileTokens = new
-		 * ArrayList<LaiLexer.Token>(lexer.getFileTokens(filename));
-		 * ast.parseFile(filename, fileTokens); } System.out.println("AST Assembled.");
-		 * 
-		 * if (flags.contains("-ast")) { System.out.println("\nAST:");
-		 * 
-		 * for (String filename : filenames) { System.out.println(filename + ":\n");
-		 * 
-		 * LaiAST.Node root = ast.getFileAST(filename);
-		 * System.out.println(getNodeDebugString(root, 1)); } }
-		 */
+		if (compilerErrors > 0) {
+			cancelWithErrors(compilerErrors);
+		}
+
 	}
 
-	/*
-	 * private static String getNodeDebugString(LaiAST.Node node, int
-	 * recursionDepth) { String out = ""; out += getIndents(recursionDepth - 1) + ""
-	 * + node.getNodeName() + "\n"; for (LaiAST.Node o : node.children) { out +=
-	 * getNodeDebugString(o, recursionDepth + 1); } return out; }
-	 */
+	public static void cancelWithErrors(int numOfErrors) {
+		System.out.println("\n\nCompilation failed with " + numOfErrors + " errors.");
+	}
 
 	public static String getIndents(int n) {
 		String out = "";

@@ -44,16 +44,11 @@ public class ASTAssembler {
 		return true;
 	}
 
-	public void assembleFile(String filename, ArrayList<LaiLexer.Token> tokens) {
-
+	private LaiContents parseContent(String filename, ArrayList<LaiLexer.Token> tokens) {
 		this.tokens = tokens;
 		this.filename = filename;
 
-		LaiFile file = new LaiFile(filename);
-		files.add(file);
-
 		LaiContents contents = new LaiContents();
-		file.addChild(contents);
 
 		// First pass we are searching for functions and variables.
 		tokenLoop: for (tokenCTR = 0; nextToken() != TokenContext.END;) {
@@ -183,9 +178,64 @@ public class ASTAssembler {
 						}
 						LaiType funcReturnType = AST.LaiType.convertLexerTypeToLaiType(token);
 
-						contents.addChild(new LaiFunction(new LaiIdentifier(ident.value), parameters, funcReturnType));
+						LaiFunction function = new LaiFunction(new LaiIdentifier(ident.value), parameters,
+								funcReturnType);
+						contents.addChild(function);
+
+						// Now we need to handle the function body, as that will be assembled to AST
+						// once we have found all function and variable definitions. We should add it to
+						// the function's token list (non-Node, so it won't be displayed, but this will
+						// make things easier later).
+
+						if (!safeNextToken())
+							continue tokenLoop;
+						if (token.type != LaiLexer.TokenType.OpOpenBrace) {
+							Main.error(filename, token.lineNumber, token.charNumber,
+									"Expected { but got '" + token.type.name + "' instead.");
+							continue tokenLoop;
+						}
+
+						// this isn't always safe because even tho the lexer does a matching brace check
+						// before it is passed to the AST, unfortunately this doesn't check the order.
+						// so }{ will mess it up. TODO
+
+						// Go to the next token for the sake of the upcoming while loop.
+						if (nextToken() == TokenContext.END) {
+							Main.error(filename, token.lineNumber, token.charNumber,
+									"End of file encountered before function close brace '}'.");
+							continue tokenLoop;
+						}
+						if (token.type == LaiLexer.TokenType.OpCloseBrace) {
+							// nani?? Empty codeblock... just leave it be
+						} else {
+							int openBraceCTR = 1;
+							while (openBraceCTR > 0) {
+
+								if (nextToken() == TokenContext.END) {
+									Main.error(filename, token.lineNumber, token.charNumber,
+											"End of file encountered before function close brace '}'.");
+									continue tokenLoop;
+								}
+								if (token.type == LaiLexer.TokenType.OpCloseBrace) {
+									openBraceCTR--;
+								}
+
+								if (token.type == LaiLexer.TokenType.OpOpenBrace) {
+									openBraceCTR++;
+								}
+
+								if (openBraceCTR == 0) {
+									break; // We don't want the code below to run if we have completed the block, we
+											// don't want the } to be included.
+								}
+
+								function.bodyTokens.add(token);
+							}
+						}
+
 					} else {
 						// This must be a function call.
+						// TODO
 					}
 
 				} else {
@@ -194,5 +244,19 @@ public class ASTAssembler {
 				}
 			}
 		}
+
+		return contents;
+	}
+
+	public void assembleFile(String filename, ArrayList<LaiLexer.Token> tokens) {
+
+		this.tokens = tokens;
+		this.filename = filename;
+
+		LaiFile file = new LaiFile(filename);
+		files.add(file);
+
+		file.addChild(this.parseContent(filename, tokens));
+
 	}
 }
