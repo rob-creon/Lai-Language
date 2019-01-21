@@ -100,8 +100,30 @@ public class AST {
 
 	public static class LaiType extends Node {
 
+		public static LaiType convertLexerTypeToLaiType(LaiLexer.Token t) {
+			return new LaiType(convertLexerTypeToLaiType(t.type));
+		}
+
+		private static Type convertLexerTypeToLaiType(LaiLexer.TokenType t) {
+			if (!t.isPrimitiveType) {
+				System.err.println("somewhere there was a fuck up --convertLexerTypeToLaiType(), AST.java");
+				return null;
+			}
+			if (t == LaiLexer.TokenType.TypeInt) {
+				return Type.LaiInteger;
+			}
+			if (t == LaiLexer.TokenType.TypeString) {
+				return Type.LaiString;
+			}
+			if (t == LaiLexer.TokenType.TypeChar) {
+				return Type.LaiTypeChar;
+			}
+			System.err.println("how the heck did that type get past --convertLexerTypeToLaiType(), AST.java");
+			return null;
+		}
+
 		public static enum Type {
-			LaiInteger, LaiString, LaiTypeUnknown,
+			LaiInteger, LaiString, LaiTypeChar, LaiTypeUnknown,
 		}
 
 		public final Type type;
@@ -133,10 +155,12 @@ public class AST {
 			this.identifier = identifier;
 			this.returnType = type;
 			this.params = params;
+			this.contents = contents;
 
 			node_children.add(identifier);
 			node_children.add(type);
 			node_children.add(contents);
+			node_children.add(params);
 		}
 
 		@Override
@@ -147,7 +171,16 @@ public class AST {
 	}
 
 	public static class LaiVariable extends Node {
-		public LaiVariable() {
+
+		public LaiIdentifier identifier;
+		public LaiType type;
+
+		public LaiVariable(LaiIdentifier id, LaiType type) {
+			this.identifier = id;
+			this.type = type;
+
+			super.addChild(identifier);
+			super.addChild(type);
 		}
 
 		@Override
