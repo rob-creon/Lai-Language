@@ -116,17 +116,17 @@ public class AST {
 				return Type.LaiString;
 			}
 			if (t == LaiLexer.TokenType.TypeChar) {
-				return Type.LaiTypeChar;
+				return Type.LaiChar;
 			}
-			System.err.println("how the heck did that type get past --convertLexerTypeToLaiType(), AST.java");
+			System.err.println("how the heck did that type get past?? --convertLexerTypeToLaiType(), AST.java");
 			return null;
 		}
 
 		public static enum Type {
-			LaiInteger, LaiString, LaiTypeChar, LaiTypeUnknown,
+			LaiInteger, LaiString, LaiChar, LaiTypeUnknown,
 		}
 
-		public final Type type;
+		public Type type;
 
 		public LaiType(Type type) {
 			this.type = type;
@@ -176,10 +176,15 @@ public class AST {
 
 		public LaiIdentifier identifier;
 		public LaiType type;
+		public int identTokenPosition;
 
-		public LaiVariable(LaiIdentifier id, LaiType type) {
+		public LaiVariable(LaiIdentifier id, LaiType type, int identTokenPosition) {
+
+			System.out.println("Creating variable " + id.identifier + " to type " + type.type);
+
 			this.identifier = id;
 			this.type = type;
+			this.identTokenPosition = identTokenPosition;
 
 			super.addChild(identifier);
 			super.addChild(type);
@@ -191,14 +196,28 @@ public class AST {
 		}
 	}
 
-	public static class LaiStatement extends Node {
-		public LaiStatement() {
+	public static abstract class LaiStatement extends Node {
+
+	}
+
+	public static class LaiStatementSetVar extends LaiStatement {
+
+		public LaiVariable var;
+		public LaiExpression exp;
+
+		public LaiStatementSetVar(LaiVariable var, LaiExpression exp) {
+			this.var = var;
+			this.exp = exp;
+
+			this.node_children.add(var);
+			this.node_children.add(exp);
 		}
 
 		@Override
 		protected String getDebugName() {
-			return "<LaiStatement>";
+			return "<SetVar>";
 		}
+
 	}
 
 	public static class LaiIdentifier extends Node {
@@ -212,6 +231,92 @@ public class AST {
 		@Override
 		protected String getDebugName() {
 			return "<LaiIdentifier:" + identifier + ">";
+		}
+	}
+
+	public static abstract class LaiExpression extends Node {
+
+		protected LaiType returnType;
+
+		public LaiExpression() {
+			returnType = this.getDefaultReturnType();
+			this.addChild(returnType);
+		}
+
+		public LaiType getReturnType() {
+			return returnType;
+		}
+
+		protected abstract LaiType getDefaultReturnType();
+	}
+
+	public static class LaiExpressionIntLiteral extends LaiExpression {
+
+		public int literalValue;
+
+		public LaiExpressionIntLiteral(int value) {
+			this.literalValue = value;
+		}
+
+		@Override
+		protected String getDebugName() {
+			return "<LaiExpressionIntLiteral=" + literalValue + ">";
+		}
+
+		@Override
+		protected LaiType getDefaultReturnType() {
+			return new LaiType(LaiType.Type.LaiInteger);
+		}
+	}
+
+	public static class LaiExpressionStringLiteral extends LaiExpression {
+
+		public String literalValue;
+
+		public LaiExpressionStringLiteral(String value) {
+			this.literalValue = value;
+		}
+
+		@Override
+		protected String getDebugName() {
+			return "<LaiExpressionStringLiteral=\"" + literalValue + "\">";
+		}
+
+		@Override
+		protected LaiType getDefaultReturnType() {
+			return new LaiType(LaiType.Type.LaiString);
+		}
+	}
+
+	public static class LaiExpressionCharLiteral extends LaiExpression {
+
+		public char literalValue;
+
+		public LaiExpressionCharLiteral(char value) {
+			this.literalValue = value;
+		}
+
+		@Override
+		protected String getDebugName() {
+			return "<LaiExpressionCharLiteral='" + literalValue + "'>";
+		}
+
+		@Override
+		protected LaiType getDefaultReturnType() {
+			return new LaiType(LaiType.Type.LaiChar);
+		}
+	}
+
+	public static class LaiExpressionUninit extends LaiExpression {
+
+		@Override
+		protected String getDebugName() {
+			return "<LaiExpressionUninit>";
+		}
+
+		@Override
+		protected LaiType getDefaultReturnType() {
+			return new LaiType(LaiType.Type.LaiTypeUnknown);
 		}
 
 	}
