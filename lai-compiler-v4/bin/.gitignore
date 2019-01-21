@@ -1,13 +1,1 @@
-/LaiAST$Node.class
-/ASTAssembler$ASTFile.class
-/LaiAST$Construct.class
-/LaiAST$IfStatement.class
-/LaiAST$CreateDeclareVar.class
-/LaiAST$CreateVar.class
-/LaiAST$LaiVariable.class
-/LaiAST$LaiType.class
-/LaiAST$SetVar.class
-/LaiAST$StringLiteral.class
-/LaiAST$IntegerLiteral.class
-/LaiAST$RootNode.class
-/LaiAST$FileNode.class
+/lai/

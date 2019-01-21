@@ -1,3 +1,5 @@
+package lai;
+
 import java.util.ArrayList;
 
 public class LaiLexer {
@@ -11,7 +13,9 @@ public class LaiLexer {
 		if (t instanceof LaiLexer.IntegerLiteral) {
 			message += ": " + ((LaiLexer.IntegerLiteral) t).value;
 		}
-
+		if (t instanceof LaiLexer.CharLiteral) {
+			message += ":'" + ((LaiLexer.CharLiteral) t).value + "'";
+		}
 		if (t instanceof LaiLexer.Identifier) {
 			message += ": " + ((LaiLexer.Identifier) t).value;
 		}
@@ -26,6 +30,9 @@ public class LaiLexer {
 
 		if (t instanceof LaiLexer.IntegerLiteral) {
 			message = "" + ((LaiLexer.IntegerLiteral) t).value;
+		}
+		if (t instanceof LaiLexer.CharLiteral) {
+			message += "'" + ((LaiLexer.CharLiteral) t).value + "'";
 		}
 
 		if (t instanceof LaiLexer.Identifier) {
@@ -42,20 +49,22 @@ public class LaiLexer {
 
 		OpBoolEqual("=="), OpBoolNotEqual("!="),
 
-		OpOpenSquare("["), OpCloseSquare("]"), OpOpenBrace("{"), OpCloseBrace("}"), OpOpenParenthesis("("),
-		OpCloseParenthesis(")"), OpComma(","), OpDot("."),
+		OpSemicolon(";"), OpOpenSquare("["), OpCloseSquare("]"), OpOpenBrace("{"), OpCloseBrace("}"),
+		OpOpenParenthesis("("), OpCloseParenthesis(")"), OpComma(","), OpDot("."),
 
-		OpMathPlus("+"), OpMathMinus("-"), OpMathPlusEquals("+="), OpMathMinusEquals("-="),
+		OpMathPlus("+"), OpMathMinus("-"), OpMathMultiply("*"), OpMathDivide("/"), OpMathPlusEquals("+="),
+		OpMathMinusEquals("-="),
 
 		OpListIterate("::"),
 
-		TypeInt("int", true), TypeString("string", true),
+		TypeInt("int", true), TypeString("string", true), TypeChar("char", true),
 
 		UnitializeValue("?"),
 
 		StatementIf("if"), StatementElse("else"), StatementFor("for"), StatementReturn("return"),
 
 		StringLiteral("#STRING_LITERAL", TokenType.TypeString), IntegerLiteral("#INTEGER_LITERAL", TokenType.TypeInt),
+		CharLiteral("#CHAR_LITERAL"),
 
 		Identifier("#IDENTIFIER");
 
@@ -111,7 +120,7 @@ public class LaiLexer {
 		public final int lineNumber;
 		public final int charNumber;
 
-		protected TokenType type;
+		public TokenType type;
 
 		public Token(int lineNumber, int charNumber, TokenType type) {
 			this.lineNumber = lineNumber;
@@ -140,6 +149,12 @@ public class LaiLexer {
 	public static class IntegerLiteral extends ValuedToken<Integer> {
 		public IntegerLiteral(int lineNumber, int charNumber, Integer value) {
 			super(lineNumber, charNumber, TokenType.IntegerLiteral, value);
+		}
+	};
+
+	public static class CharLiteral extends ValuedToken<Character> {
+		public CharLiteral(int lineNumber, int charNumber, Character value) {
+			super(lineNumber, charNumber, TokenType.CharLiteral, value);
 		}
 	};
 

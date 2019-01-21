@@ -1,8 +1,10 @@
-import java.util.ArrayList;
+package lai;
+
 import java.io.File;
+import java.util.ArrayList;
 import java.util.Scanner;
 
-class Main {
+public class Main {
 
 	private static String getCarrotPointer(int offset) {
 		String s = "";
@@ -15,10 +17,12 @@ class Main {
 
 	public static void error(String filename, int lineNumber, int charNumber, String message, String offendingLine) {
 		System.out.println("Error in file '" + filename + "(" + (lineNumber + 1) + ")" + "':");
-		System.out.println("\t" + offendingLine);
+		System.out.println("\t" + offendingLine.replace("\t", ""));
 		System.out.println("\t" + getCarrotPointer(charNumber));
 		System.out.println(message);
 		System.out.println("");
+
+		Main.compilerErrors++;
 	}
 
 	public static void error(String filename, int lineNumber, int charNumber, String message) {
@@ -44,6 +48,8 @@ class Main {
 	static ArrayList<String> filenames = new ArrayList<String>();
 
 	static ArrayList<ArrayList<String>> filesContent = new ArrayList<>();
+
+	static int compilerErrors = 0;
 
 	public static void main(String[] args) {
 
@@ -131,7 +137,7 @@ class Main {
 						futureindent--;
 					}
 					tokenIndex++;
-					if (tokenIndex >= tokens.size() - 1) {
+					if (tokenIndex >= tokens.size()) {
 						break;
 					}
 				}
@@ -140,42 +146,52 @@ class Main {
 				// futureindent = 0;
 				lineNum++;
 			}
+			System.out.print("\n\n");
+		}
+
+		if (compilerErrors > 0) {
+			System.out.println("Can not continue compilation until errors are fixed.");
+			System.exit(0);
+		}
+
+		System.out.println("Assembling AST...");
+		ASTAssembler ast = new ASTAssembler();
+		ast.assembleFile(filenames.get(0), tokens);
+		System.out.println("AST assembled.");
+
+		if (flags.contains("-ast")) {
+			System.out.println("\nAST:\n");
+			AST.LaiFile file = ast.files.get(0);
+			System.out.println(file.getDebugString(0));
 		}
 
 		/*********************************/
 		/* Assemble Abstract Syntax Tree */
 		/*********************************/
-		System.out.println("Assembling AST...");
-		ASTAssembler ast = new ASTAssembler();
-		for (int i = 0; i < filenames.size(); ++i) {
-			String filename = filenames.get(i);
-			ArrayList<LaiLexer.Token> fileTokens = new ArrayList<LaiLexer.Token>(lexer.getFileTokens(filename));
-			ast.parseFile(filename, fileTokens);
-		}
-		System.out.println("AST Assembled.");
-
-		if (flags.contains("-ast")) {
-			System.out.println("\nAST:");
-
-			for (String filename : filenames) {
-				System.out.println(filename + ":\n");
-
-				LaiAST.Node root = ast.getFileAST(filename);
-				System.out.println(getNodeDebugString(root, 1));
-			}
-		}
+		/*
+		 * System.out.println("Assembling AST..."); ASTAssembler ast = new
+		 * ASTAssembler(); for (int i = 0; i < filenames.size(); ++i) { String filename
+		 * = filenames.get(i); ArrayList<LaiLexer.Token> fileTokens = new
+		 * ArrayList<LaiLexer.Token>(lexer.getFileTokens(filename));
+		 * ast.parseFile(filename, fileTokens); } System.out.println("AST Assembled.");
+		 * 
+		 * if (flags.contains("-ast")) { System.out.println("\nAST:");
+		 * 
+		 * for (String filename : filenames) { System.out.println(filename + ":\n");
+		 * 
+		 * LaiAST.Node root = ast.getFileAST(filename);
+		 * System.out.println(getNodeDebugString(root, 1)); } }
+		 */
 	}
 
-	private static String getNodeDebugString(LaiAST.Node node, int recursionDepth) {
-		String out = "";
-		out += getIndents(recursionDepth - 1) + "" + node.getNodeName() + "\n";
-		for (LaiAST.Node o : node.children) {
-			out += getNodeDebugString(o, recursionDepth + 1);
-		}
-		return out;
-	}
+	/*
+	 * private static String getNodeDebugString(LaiAST.Node node, int
+	 * recursionDepth) { String out = ""; out += getIndents(recursionDepth - 1) + ""
+	 * + node.getNodeName() + "\n"; for (LaiAST.Node o : node.children) { out +=
+	 * getNodeDebugString(o, recursionDepth + 1); } return out; }
+	 */
 
-	private static String getIndents(int n) {
+	public static String getIndents(int n) {
 		String out = "";
 		for (int i = 0; i < n; i++) {
 			out += "\t";

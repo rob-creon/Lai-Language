@@ -1,0 +1,30 @@
+//Function for decoding Alphabetical Substitutions
+dummy(; )
+
+getMessageFromCipher(secret : string, key : string) : string {
+	
+	alphabet := "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+	output : string
+	var : string = "explicitly declared type"
+	
+	for (it :: secret.chars) {
+		
+		//If we encounter a space, skip it.
+		if (it == ' ') {
+			output += ' '
+			continue
+		}
+		
+		assert(alphabet.contains(it), "The secret contains special characters. Can't continue!")
+		
+		index := alphabet.indexOf(it)
+		output += key.chars[index]
+	}
+	
+	return output
+}
+
+msg_encoded := "ZM LEVIOB ZNYRGRLFH ZGGVNKG GL RNKILEV XKK NZWV NZRMOB ULI VWFXZGRLMZO KFIKLHVH XLNKROVH GL XKK"
+msg_key := "ZYXWVUTSRQPONMLKJIHGFEDCBA"
+
+print(getMessageFromCipher(msg_encoded, msg_key))

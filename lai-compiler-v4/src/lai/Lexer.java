@@ -1,3 +1,5 @@
+package lai;
+
 import java.util.ArrayList;
 
 public class Lexer {
@@ -109,7 +111,28 @@ public class Lexer {
 					// Op ends on the second ".
 					continue;
 
+				} else if (op == '\'') {
+					// Char literal
+					if (charNumber + 1 >= line.length()) {
+						Main.error(filename, lineNumber, charNumber - 1,
+								"Unexpected end of line while parsing char literal.", line);
+						break;
+					}
+					charNumber++;
+					op = line.charAt(charNumber);
+					if (op == '\'') {
+						Main.error(filename, lineNumber, charNumber - 1, "Can not init empty char!", line);
+						break;
+					}
+					lexerFile.addToken(new LaiLexer.CharLiteral(lineNumber, charNumber, op));
+					charNumber++;
+					op = line.charAt(charNumber);
+					if (op != '\'') {
+						Main.error(filename, lineNumber, charNumber - 1, "Expected ' but got " + op, line);
+						break;
+					}
 				} else if (isNumber(op)) {
+
 					// If it is a number, then this is likely a digit.
 					String literalValue = "";
 					while (isNumber(op)) {
@@ -266,6 +289,62 @@ public class Lexer {
 					Main.error(filename, lineNumber, charNumber, "Could not parse char '" + op + "'.", line);
 				}
 			}
+			// Insert a semicolon at the end of every line
+			lexerFile.addToken(new LaiLexer.Token(lineNumber, line.length(), LaiLexer.TokenType.OpSemicolon));
+		}
+
+		// Syntax check tokens for matching () and {}.
+		int openBraceCount = 0;
+		int closeBraceCount = 0;
+
+		int openParCount = 0;
+		int closeParCount = 0;
+
+		for (LaiLexer.Token t : lexerFile.tokens) {
+
+			switch (t.type) {
+
+			case OpOpenBrace:
+				openBraceCount++;
+				break;
+
+			case OpCloseBrace:
+				closeBraceCount++;
+				break;
+
+			case OpOpenParenthesis:
+				openParCount++;
+				break;
+
+			case OpCloseParenthesis:
+				closeParCount++;
+				break;
+			default:
+
+			}
+
+		}
+
+		if (openBraceCount != closeBraceCount) {
+			String msg;
+			if (openBraceCount > closeBraceCount) {
+				msg = (openBraceCount - closeBraceCount) + " too many open braces";
+			} else {
+				msg = (closeBraceCount - openBraceCount) + " too many close braces";
+			}
+			Main.error(filename, fileContents.size() - 1, fileContents.get(fileContents.size() - 1).length() - 1,
+					"There are " + msg + " in the file.");
+		}
+
+		if (openParCount != closeParCount) {
+			String msg;
+			if (openParCount > closeParCount) {
+				msg = (openParCount - closeParCount) + " too many open parenthesis";
+			} else {
+				msg = (closeParCount - openParCount) + " too many close parenthesis";
+			}
+			Main.error(filename, fileContents.size() - 1, fileContents.get(fileContents.size() - 1).length() - 1,
+					"There are " + msg + " in the file.");
 		}
 	}
 

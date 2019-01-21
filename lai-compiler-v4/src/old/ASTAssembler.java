@@ -1,4 +1,14 @@
+package old;
 import java.util.ArrayList;
+
+import lai.LaiLexer;
+import lai.Main;
+import lai.LaiLexer.Identifier;
+import lai.LaiLexer.IntegerLiteral;
+import lai.LaiLexer.StringLiteral;
+import lai.LaiLexer.Token;
+import lai.LaiLexer.TokenType;
+import lai.LaiLexer.ValuedToken;
 
 public class ASTAssembler {
 
@@ -78,6 +88,26 @@ public class ASTAssembler {
 
 	@SuppressWarnings("rawtypes")
 	public LaiAST.SetVar getSetVarToLiteralStatement(ASTFile file, LaiAST.LaiVariable var, LaiAST.LaiType type,
+			LaiLexer.ValuedToken value) {
+
+		LaiAST.LaiType laiType = LaiAST.getASTConvertedType(value.type.laiType);
+		if (laiType != type) {
+			Main.error(file.filename, value.lineNumber, value.charNumber,
+					type + " expected. Got " + laiType + "/" + value.type + " instead.");
+		}
+
+		LaiAST.Node literal = null;
+		if (type == LaiAST.LaiType.TypeString) {
+			literal = new LaiAST.StringLiteral(value.lineNumber, value.charNumber, (LaiLexer.StringLiteral) value);
+		} else if (type == LaiAST.LaiType.TypeInt) {
+			literal = new LaiAST.IntegerLiteral(value.lineNumber, value.charNumber, (LaiLexer.IntegerLiteral) value);
+		}
+
+		LaiAST.SetVar setVarStatement = new LaiAST.SetVar(value.lineNumber, value.charNumber, var, literal);
+		return setVarStatement;
+	}
+	
+	public LaiAST.SetVar getSetVarToExpression(ASTFile file, LaiAST.LaiVariable var, LaiAST.LaiType type,
 			LaiLexer.ValuedToken value) {
 
 		LaiAST.LaiType laiType = LaiAST.getASTConvertedType(value.type.laiType);

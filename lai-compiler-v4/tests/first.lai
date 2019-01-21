@@ -1,7 +1,9 @@
 
 i := 100
+blah := 100 + 10
+
 j : int
-k := i
+k := i + 10
 
 initthisvartonull : int = ?
 
