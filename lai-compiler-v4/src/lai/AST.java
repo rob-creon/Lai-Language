@@ -39,9 +39,11 @@ public class AST {
 
 	public static class LaiFile extends Node {
 		public final String filename;
+		public LaiContents contents;
 
 		public LaiFile(String filename) {
 			this.filename = filename;
+			this.contents = new LaiContents("File Origin");
 		}
 
 		@Override
@@ -52,14 +54,32 @@ public class AST {
 
 	public static class LaiContents extends Node {
 
-		public LaiList<LaiFunction> functions = new LaiList<LaiFunction>("LaiFunction");
-		public LaiList<LaiVariable> variables = new LaiList<LaiVariable>("LaiVariable");
-		public LaiList<LaiStatement> statements = new LaiList<LaiStatement>("LaiStatement");
+		public LaiList<LaiFunction> functions;
+		public LaiList<LaiVariable> variables;
+		public LaiList<LaiStatement> statements;
 
-		protected LaiContents() {
+		protected LaiContents(LaiContents copy) {
+			this.node_parent = copy.node_parent;
+			this.functions = new LaiList<LaiFunction>(copy.functions);
+			this.variables = new LaiList<LaiVariable>(copy.variables);
+			this.statements = new LaiList<LaiStatement>(copy.statements);
+		}
+
+		protected LaiContents(String deb) {
+			System.out.println("initing contents " + deb);
+
+			functions = new LaiList<LaiFunction>("LaiFunction");
+			variables = new LaiList<LaiVariable>("LaiVariable");
+			statements = new LaiList<LaiStatement>("LaiStatement");
+
 			node_children.add(functions);
 			node_children.add(variables);
 			node_children.add(statements);
+		}
+
+		@Override
+		public String getDebugString(int layer) {
+			return super.getDebugString(layer);
 		}
 
 		@Override
@@ -70,10 +90,16 @@ public class AST {
 
 	public static class LaiList<T extends Node> extends Node {
 		private final String debugName;
-		public ArrayList<T> list_children = new ArrayList<T>();
+		public ArrayList<T> list_children;
 
 		public LaiList(String debugName) {
 			this.debugName = debugName;
+			this.list_children = new ArrayList<T>();
+		}
+
+		public LaiList(LaiList<T> copy) {
+			this.debugName = copy.debugName;
+			this.list_children = new ArrayList<T>(copy.list_children);
 		}
 
 		@SuppressWarnings("unchecked")
@@ -148,22 +174,26 @@ public class AST {
 		public LaiType returnType;
 		public LaiContents contents;
 
+		public boolean isCImport;
+
 		public ArrayList<LaiLexer.Token> bodyTokens = new ArrayList<LaiLexer.Token>();
 
 		public int identTokenPosition;
 
-		public LaiFunction(LaiIdentifier identifier, LaiList<LaiVariable> params, LaiType type,
-				int identTokenPosition) {
-			this(identifier, params, type, new LaiContents(), identTokenPosition);
+		public LaiFunction(LaiIdentifier identifier, LaiList<LaiVariable> params, LaiType type, int identTokenPosition,
+				boolean isCImport) {
+			this(identifier, params, type, new LaiContents("from " + identifier.identifier), identTokenPosition,
+					isCImport);
 		}
 
 		public LaiFunction(LaiIdentifier identifier, LaiList<LaiVariable> params, LaiType type, LaiContents contents,
-				int identTokenPosition) {
+				int identTokenPosition, boolean isCImport) {
 			this.identifier = identifier;
 			this.returnType = type;
 			this.params = params;
 			this.contents = contents;
 			this.identTokenPosition = identTokenPosition;
+			this.isCImport = isCImport;
 
 			node_children.add(identifier);
 			node_children.add(type);

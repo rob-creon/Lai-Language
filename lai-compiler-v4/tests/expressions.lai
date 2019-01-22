@@ -1,5 +1,6 @@
 add(a : int, b : int) : int{
-	return a + b
+	aosdm := "nice"
+	//return a + b
 }
 
 add(4, 11)

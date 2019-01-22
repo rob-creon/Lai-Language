@@ -62,6 +62,8 @@ public class LaiLexer {
 		UnitializeValue("?"),
 
 		StatementIf("if"), StatementElse("else"), StatementFor("for"), StatementReturn("return"),
+		
+		//KeywordCExtern("_C_external"),
 
 		StringLiteral("#STRING_LITERAL", TokenType.TypeString), IntegerLiteral("#INTEGER_LITERAL", TokenType.TypeInt),
 		CharLiteral("#CHAR_LITERAL"),

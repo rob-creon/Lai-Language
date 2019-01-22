@@ -1,4 +1,6 @@
 
+
+
 foobar := "blahblab"
 
 i := 100; 
@@ -13,10 +15,6 @@ letterA : char = 'a'
 k := blah + 10
 
 initthisvartonull : int = ?
-
-thiswillerror : string = 12
-thistoowillerrror : int = "string"
-
 
 test : string = "Hello, Sailor!"
 

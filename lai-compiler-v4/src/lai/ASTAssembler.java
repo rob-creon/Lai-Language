@@ -64,6 +64,8 @@ public class ASTAssembler {
 		// First pass we are searching for functions and variables.
 		tokenLoop: for (tokenCTR = 0; nextToken() != TokenContext.END;) {
 
+			System.out.println(tokenCTR);
+
 			if (token.type == LaiLexer.TokenType.OpSemicolon) {
 				continue;
 			}
@@ -198,7 +200,7 @@ public class ASTAssembler {
 						LaiType funcReturnType = AST.LaiType.convertLexerTypeToLaiType(token);
 
 						LaiFunction function = new LaiFunction(new LaiIdentifier(ident.value), parameters,
-								funcReturnType, ident_token_location);
+								funcReturnType, ident_token_location, false);
 						contents.functions.addChild(function);
 
 						// Now we need to handle the function body, as that will be assembled to AST
@@ -659,8 +661,9 @@ public class ASTAssembler {
 
 						if (foundType != expectedType) {
 							Main.error(filename, token.lineNumber, token.charNumber,
-									"Argument mismatch on argument (id=" + argumentID + ", where id starts at 0). Expected "
-											+ expectedType.name() + ", but got " + foundType.name() + " instead.");
+									"Argument mismatch on argument (id=" + argumentID
+											+ ", where id starts at 0). Expected " + expectedType.name() + ", but got "
+											+ foundType.name() + " instead.");
 							skipToEndOfLine();
 							continue tokenLoop;
 						}
@@ -996,14 +999,40 @@ public class ASTAssembler {
 
 	}
 
-	private LaiContents parseContent(String filename, ArrayList<LaiLexer.Token> tokens) {
+	private LaiContents parseContent(String filename, ArrayList<LaiLexer.Token> tokens, LaiList<LaiVariable> params) {
+		if (params == null) {
+			params = new LaiList<LaiVariable>("LaiVariable");
+		}
+		System.out.print("parsingContents... params(");
+		for (LaiVariable v : params.list_children) {
+			System.out.print(v.identifier.identifier + ", ");
+		}
+		System.out.print(")\n");
 		this.tokens = tokens;
 		this.filename = filename;
 
-		LaiContents contents = new LaiContents();
+		String id = "file[]";
+		if (params.list_children.size() > 0) {
+			id = "function()";
+		}
+
+		LaiContents contents = new LaiContents("parseContent(" + id + ")");
 
 		this.parseVariablesAndFunctionsToContent(filename, tokens, contents);
-		this.parseStatements(filename, tokens, contents, null);
+		this.parseStatements(filename, tokens, contents, params);
+
+		for (LaiFunction f : contents.functions.list_children) {
+			f.bodyTokens.add(0, new LaiLexer.Token(0, 0, LaiLexer.TokenType.OpSemicolon));
+			f.bodyTokens.add(0, new LaiLexer.Token(0, 0, LaiLexer.TokenType.OpSemicolon));
+			f.bodyTokens.add(0, new LaiLexer.Token(0, 0, LaiLexer.TokenType.OpSemicolon));
+			f.contents = parseContent(filename, f.bodyTokens, f.params);
+
+			f.node_children.clear();
+			f.addChild(f.identifier);
+			f.addChild(f.contents);
+			f.addChild(f.params);
+			f.addChild(f.returnType);
+		}
 
 		return contents;
 	}
@@ -1016,7 +1045,9 @@ public class ASTAssembler {
 		LaiFile file = new LaiFile(filename);
 		files.add(file);
 
-		file.addChild(this.parseContent(filename, tokens));
+		file.contents = this.parseContent(filename, tokens, null);
+		file.node_children.clear();
+		file.addChild(file.contents);
 
 	}
 }
