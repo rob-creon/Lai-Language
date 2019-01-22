@@ -63,7 +63,7 @@ public class LaiLexer {
 
 		StatementIf("if"), StatementElse("else"), StatementFor("for"), StatementReturn("return"),
 		
-		//KeywordCExtern("_C_external"),
+		KeywordCExtern("_import_C"),
 
 		StringLiteral("#STRING_LITERAL", TokenType.TypeString), IntegerLiteral("#INTEGER_LITERAL", TokenType.TypeInt),
 		CharLiteral("#CHAR_LITERAL"),

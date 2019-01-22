@@ -180,10 +180,14 @@ public class Main {
 			cancelWithErrors(compilerErrors);
 		}
 
+		Backend code_generator = new BackendC(ast.files);
+		System.out.println("\n\nCompiled Code:");
+		System.out.println(code_generator.compile());
 	}
 
 	public static void cancelWithErrors(int numOfErrors) {
 		System.out.println("\n\nCompilation failed with " + numOfErrors + " errors.");
+		System.exit(0);
 	}
 
 	public static String getIndents(int n) {

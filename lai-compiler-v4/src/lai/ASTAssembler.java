@@ -64,8 +64,6 @@ public class ASTAssembler {
 		// First pass we are searching for functions and variables.
 		tokenLoop: for (tokenCTR = 0; nextToken() != TokenContext.END;) {
 
-			System.out.println(tokenCTR);
-
 			if (token.type == LaiLexer.TokenType.OpSemicolon) {
 				continue;
 			}
@@ -347,7 +345,7 @@ public class ASTAssembler {
 	}
 
 	private void parseStatements(String filename, ArrayList<LaiLexer.Token> tokens, LaiContents contents,
-			LaiList<LaiVariable> params) {
+			LaiList<LaiVariable> params, LaiFunction this_function) {
 
 		this.tokens = tokens;
 		this.filename = filename;
@@ -364,7 +362,36 @@ public class ASTAssembler {
 				continue;
 			}
 
-			if (token.type == LaiLexer.TokenType.Identifier) {
+			if (token.type == LaiLexer.TokenType.KeywordCExtern) {
+				if (this_function != null) {
+					this_function.isCImport = true;
+				} else {
+					Main.error(filename, token.lineNumber, token.charNumber,
+							"The C import keyword can only be used inside a function. ");
+					skipToEndOfLine();
+					continue tokenLoop;
+				}
+
+				// Count the number of tokens in the imported function body. it must not contain
+				// anything except the CExtern keyword.
+				int nonSemicolonTokenCount = 0;
+				for (int i = 0; i < tokens.size(); ++i) {
+					if (tokens.get(i).type != TokenType.OpSemicolon) {
+						nonSemicolonTokenCount++;
+						if (nonSemicolonTokenCount > 1) {
+							break;
+						}
+					}
+				}
+				if (nonSemicolonTokenCount > 1) {
+					Main.error(filename, token.lineNumber, token.charNumber,
+							"An imported C function must have an empty body. example: print(print_stream : string) : void {"
+									+ TokenType.KeywordCExtern.name + "}");
+					skipToEndOfLine();
+					continue tokenLoop;
+				}
+			} else if (token.type == LaiLexer.TokenType.Identifier) {
+
 				// Check if this identifier has been created already
 				LaiVariable localVar = null;
 				for (LaiVariable v : contents.variables.list_children) {
@@ -999,15 +1026,12 @@ public class ASTAssembler {
 
 	}
 
-	private LaiContents parseContent(String filename, ArrayList<LaiLexer.Token> tokens, LaiList<LaiVariable> params) {
+	private LaiContents parseContent(String filename, ArrayList<LaiLexer.Token> tokens, LaiList<LaiVariable> params,
+			LaiFunction this_function) {
 		if (params == null) {
 			params = new LaiList<LaiVariable>("LaiVariable");
 		}
-		System.out.print("parsingContents... params(");
-		for (LaiVariable v : params.list_children) {
-			System.out.print(v.identifier.identifier + ", ");
-		}
-		System.out.print(")\n");
+
 		this.tokens = tokens;
 		this.filename = filename;
 
@@ -1019,19 +1043,18 @@ public class ASTAssembler {
 		LaiContents contents = new LaiContents("parseContent(" + id + ")");
 
 		this.parseVariablesAndFunctionsToContent(filename, tokens, contents);
-		this.parseStatements(filename, tokens, contents, params);
+		this.parseStatements(filename, tokens, contents, params, this_function);
 
 		for (LaiFunction f : contents.functions.list_children) {
-			f.bodyTokens.add(0, new LaiLexer.Token(0, 0, LaiLexer.TokenType.OpSemicolon));
-			f.bodyTokens.add(0, new LaiLexer.Token(0, 0, LaiLexer.TokenType.OpSemicolon));
-			f.bodyTokens.add(0, new LaiLexer.Token(0, 0, LaiLexer.TokenType.OpSemicolon));
-			f.contents = parseContent(filename, f.bodyTokens, f.params);
 
-			f.node_children.clear();
-			f.addChild(f.identifier);
-			f.addChild(f.contents);
-			f.addChild(f.params);
-			f.addChild(f.returnType);
+			// A buffer of semicolons to prevent off by one errors
+			f.bodyTokens.add(0, new LaiLexer.Token(0, 0, LaiLexer.TokenType.OpSemicolon));
+			f.bodyTokens.add(0, new LaiLexer.Token(0, 0, LaiLexer.TokenType.OpSemicolon));
+			f.bodyTokens.add(0, new LaiLexer.Token(0, 0, LaiLexer.TokenType.OpSemicolon));
+
+			f.contents = parseContent(filename, f.bodyTokens, f.params, f);
+
+			f.resetNodeReferences();
 		}
 
 		return contents;
@@ -1045,7 +1068,7 @@ public class ASTAssembler {
 		LaiFile file = new LaiFile(filename);
 		files.add(file);
 
-		file.contents = this.parseContent(filename, tokens, null);
+		file.contents = this.parseContent(filename, tokens, null, null);
 		file.node_children.clear();
 		file.addChild(file.contents);
 

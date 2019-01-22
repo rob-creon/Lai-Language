@@ -35,6 +35,17 @@ public class AST {
 		}
 
 		protected abstract String getDebugName();
+
+		/**
+		 * Java's pass by reference/value decisions can mess up stuff because of how
+		 * childs are stored in lists, so if a node's child is being replaced, it's
+		 * reference in the list needs to be updated. This function should just readd
+		 * all children to the list.
+		 * 
+		 * @param none
+		 */
+
+		public abstract void resetNodeReferences();
 	}
 
 	public static class LaiFile extends Node {
@@ -49,6 +60,12 @@ public class AST {
 		@Override
 		protected String getDebugName() {
 			return "<LaiFile:" + filename + ">";
+		}
+
+		@Override
+		public void resetNodeReferences() {
+			node_children.clear();
+			addChild(contents);
 		}
 	}
 
@@ -66,8 +83,6 @@ public class AST {
 		}
 
 		protected LaiContents(String deb) {
-			System.out.println("initing contents " + deb);
-
 			functions = new LaiList<LaiFunction>("LaiFunction");
 			variables = new LaiList<LaiVariable>("LaiVariable");
 			statements = new LaiList<LaiStatement>("LaiStatement");
@@ -78,13 +93,17 @@ public class AST {
 		}
 
 		@Override
-		public String getDebugString(int layer) {
-			return super.getDebugString(layer);
+		protected String getDebugName() {
+			return "<LaiContents>";
 		}
 
 		@Override
-		protected String getDebugName() {
-			return "<LaiContents>";
+		public void resetNodeReferences() {
+			node_children.clear();
+
+			node_children.add(functions);
+			node_children.add(variables);
+			node_children.add(statements);
 		}
 	}
 
@@ -108,7 +127,7 @@ public class AST {
 			try {
 				list_children.add((T) n);
 			} catch (Exception e) {
-				System.out.println("COMPILER ERROR: " + "tried to add incompatible type to AST.LaiList<T>");
+				System.err.println("COMPILER ERROR: " + "tried to add incompatible type to AST.LaiList<T>");
 				return;
 			}
 			n.node_parent = this;
@@ -123,6 +142,12 @@ public class AST {
 		@Override
 		protected String getDebugName() {
 			return "LaiList<" + debugName + ">";
+		}
+
+		@Override
+		public void resetNodeReferences() {
+//			this.node_children.clear();
+//			this.addChild("");
 		}
 	}
 
@@ -163,6 +188,11 @@ public class AST {
 		@Override
 		protected String getDebugName() {
 			return "<LaiType:" + type.name() + ">";
+		}
+
+		@Override
+		public void resetNodeReferences() {
+
 		}
 
 	}
@@ -206,6 +236,15 @@ public class AST {
 			return "<LaiFunction>";
 		}
 
+		@Override
+		public void resetNodeReferences() {
+			node_children.clear();
+			node_children.add(identifier);
+			node_children.add(returnType);
+			node_children.add(params);
+			node_children.add(contents);
+		}
+
 	}
 
 	public static class LaiVariable extends Node {
@@ -227,6 +266,13 @@ public class AST {
 		@Override
 		protected String getDebugName() {
 			return "<LaiVariable>";
+		}
+
+		@Override
+		public void resetNodeReferences() {
+			this.node_children.clear();
+			super.addChild(identifier);
+			super.addChild(type);
 		}
 	}
 
@@ -252,6 +298,13 @@ public class AST {
 			return "<SetVar>";
 		}
 
+		@Override
+		public void resetNodeReferences() {
+			node_children.clear();
+			this.node_children.add(var);
+			this.node_children.add(exp);
+		}
+
 	}
 
 	public static class LaiIdentifier extends Node {
@@ -265,6 +318,11 @@ public class AST {
 		@Override
 		protected String getDebugName() {
 			return "<LaiIdentifier:" + identifier + ">";
+		}
+
+		@Override
+		public void resetNodeReferences() {
+
 		}
 	}
 
@@ -301,6 +359,11 @@ public class AST {
 		protected LaiType getDefaultReturnType() {
 			return new LaiType(LaiType.Type.LaiInteger);
 		}
+
+		@Override
+		public void resetNodeReferences() {
+
+		}
 	}
 
 	public static class LaiExpressionStringLiteral extends LaiExpression {
@@ -319,6 +382,11 @@ public class AST {
 		@Override
 		protected LaiType getDefaultReturnType() {
 			return new LaiType(LaiType.Type.LaiString);
+		}
+
+		@Override
+		public void resetNodeReferences() {
+
 		}
 	}
 
@@ -339,6 +407,11 @@ public class AST {
 		protected LaiType getDefaultReturnType() {
 			return new LaiType(LaiType.Type.LaiChar);
 		}
+
+		@Override
+		public void resetNodeReferences() {
+
+		}
 	}
 
 	public static class LaiExpressionUninit extends LaiExpression {
@@ -351,6 +424,11 @@ public class AST {
 		@Override
 		protected LaiType getDefaultReturnType() {
 			return new LaiType(LaiType.Type.LaiTypeUnknown);
+		}
+
+		@Override
+		public void resetNodeReferences() {
+
 		}
 
 	}
@@ -376,6 +454,12 @@ public class AST {
 			return "<LaiExpressionVariable>";
 		}
 
+		@Override
+		public void resetNodeReferences() {
+			node_children.clear();
+			this.addChild(var);
+		}
+
 	}
 
 	public static abstract class LaiExpressionBasicMath extends LaiExpression {
@@ -395,6 +479,12 @@ public class AST {
 			return new LaiType(LaiType.Type.LaiTypeUnknown);
 		}
 
+		@Override
+		public void resetNodeReferences() {
+			node_children.clear();
+			this.addChild(expA);
+			this.addChild(expB);
+		}
 	}
 
 	public static class LaiExpressionAddition extends LaiExpressionBasicMath {
@@ -492,6 +582,13 @@ public class AST {
 		@Override
 		protected String getDebugName() {
 			return "<LaiStatementFunctionCall>";
+		}
+
+		@Override
+		public void resetNodeReferences() {
+			this.node_children.clear();
+			super.addChild(function);
+			super.addChild(params);
 		}
 
 	}

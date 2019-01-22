@@ -3,6 +3,10 @@ add(a : int, b : int) : int{
 	//return a + b
 }
 
+print(print_stream : string) : int {
+	_import_C
+}
+
 add(4, 11)
 
 A := 1
