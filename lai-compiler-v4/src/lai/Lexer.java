@@ -2,8 +2,6 @@ package lai;
 
 import java.util.ArrayList;
 
-import lai.LaiLexer.Token;
-
 public class Lexer {
 
 	private class LexerFile {
@@ -155,8 +153,8 @@ public class Lexer {
 
 					int value = Integer.parseInt(literalValue);
 					lexerFile.addToken(new LaiLexer.IntegerLiteral(lineNumber, charNumber, value));
-					
-					if(!isNumber(op)) {
+
+					if (!isNumber(op)) {
 						charNumber--;
 					}
 					continue;

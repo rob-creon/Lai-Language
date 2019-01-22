@@ -1,6 +1,7 @@
 package lai;
 
 import java.util.ArrayList;
+import java.util.Stack;
 
 import lai.AST.*;
 import lai.AST.LaiType.Type;
@@ -562,6 +563,7 @@ public class ASTAssembler {
 	 * @param expressionTokenLocationStart
 	 * @return
 	 */
+	@SuppressWarnings("rawtypes")
 	private LaiExpression parseExpression(String filename, ArrayList<LaiLexer.Token> tokens, LaiContents contents,
 			LaiList<LaiVariable> params, int expressionTokenLocationStart) {
 		this.tokenCTR = expressionTokenLocationStart;
@@ -593,7 +595,6 @@ public class ASTAssembler {
 			}
 			return parseSingleTokenExpression(filename, token, contents, params);
 		} else {
-
 			// Implementation of Shunting Yard Algorithm
 			ArrayList<LaiLexer.TokenType> operators = new ArrayList<LaiLexer.TokenType>();
 			ArrayList<Integer> precedence = new ArrayList<Integer>();
@@ -613,8 +614,11 @@ public class ASTAssembler {
 			operators.add(TokenType.OpPow);
 			precedence.add(2);
 
-			ArrayList<Object> postfix = new ArrayList<Object>();
-			ArrayList<LaiLexer.Token> operatorStack = new ArrayList<LaiLexer.Token>();
+			Stack<Object> tokenPostfix = new Stack<Object>();
+			// Stack<LaiExpression> astPostfix = new Stack<LaiExpression>();
+
+			Stack<LaiLexer.Token> operatorStack = new Stack<LaiLexer.Token>();
+			Stack<LaiExpression> treeStack = new Stack<LaiExpression>();
 
 			for (int i = expressionTokenLocationStart; i < expressionTokenLocationStart + expressionLength; i++) {
 				LaiLexer.Token t = tokens.get(i);
@@ -622,20 +626,23 @@ public class ASTAssembler {
 				int topStackPrec = -1;
 
 				if (operatorStack.size() > 0) {
-					if (operatorStack.get(operatorStack.size() - 1).type != TokenType.OpOpenParenthesis)
-						topStackPrec = precedence
-								.get(operators.indexOf(operatorStack.get(operatorStack.size() - 1).type));
+					if (operatorStack.peek().type != TokenType.OpOpenParenthesis)
+						topStackPrec = precedence.get(operators.indexOf(operatorStack.peek().type));
 				}
 
 				if (operators.contains(t.type)) {
 					prec = precedence.get(operators.indexOf(t.type));
 				}
 
-				if (t.type == TokenType.Identifier) {// If the incoming symbol is an operand, print it.
-					postfix.add(t);
+				if (t instanceof LaiLexer.ValuedToken) {// If the incoming symbol is an operand,
+														// print it.
+					tokenPostfix.push(t);
+					treeStack.push(this.parseSingleTokenExpression(filename, t, contents, params));
+
+					// Add this as a leaf node to the expression stack.
 				} else if (t.type == TokenType.OpOpenParenthesis) {// If the incoming symbol is a left
 																	// parenthesis, push it on the stack.
-					operatorStack.add(t);
+					operatorStack.push(t);
 				} else if (t.type == TokenType.OpOpenParenthesis) {// If the incoming symbol is a right
 																	// parenthesis: discard the right
 																	// parenthesis, pop and print the stack
@@ -644,69 +651,145 @@ public class ASTAssembler {
 
 					// Pop and Print the stack symbols until ( encountered.
 					while (operatorStack.get(operatorStack.size() - 1).type != TokenType.OpOpenParenthesis) {
-						postfix.add(operatorStack.get(operatorStack.size() - 1));
-						operatorStack.remove(operatorStack.size() - 1);
+
+						LaiLexer.Token operatorToken = operatorStack.peek();
+						LaiExpression expB = treeStack.pop();
+						LaiExpression expA = treeStack.pop();
+						LaiExpressionBasicMath expOp = null;
+
+						switch (operatorToken.type) {
+
+						case OpMathPlus:
+							expOp = new LaiExpressionAddition(expA, expB);
+							break;
+						case OpMathMinus:
+							expOp = new LaiExpressionMinus(expA, expB);
+							break;
+						case OpMathMultiply:
+							expOp = new LaiExpressionMultiply(expA, expB);
+							break;
+						case OpMathDivide:
+							expOp = new LaiExpressionDivide(expA, expB);
+							break;
+						default:
+							System.err.println("unsupported op");
+							break;
+						}
+						treeStack.push(expOp);
+
+						tokenPostfix.push(operatorStack.pop());
 					}
 					// Pop and discard (.
-					operatorStack.remove(operatorStack.size() - 1);
+					operatorStack.pop();
 
 				} else if (operators.contains(t.type) && (operatorStack.size() == 0
 						|| operatorStack.get(operatorStack.size() - 1).type == TokenType.OpOpenParenthesis)) {
 					// If the incoming symbol is an operator and the stack is empty or contains a
 					// left parenthesis on top, push the incoming operator onto the stack.
-					operatorStack.add(t);
+					operatorStack.push(t);
 
 				} else if (operators.contains(t.type)
-						&& (prec > topStackPrec || prec == topStackPrec && t.type == TokenType.OpPow)) {
+						&& (prec > topStackPrec || (prec == topStackPrec && t.type == TokenType.OpPow))) {
 					// If the incoming symbol is an operator and has either higher precedence than
 					// the operator on the top of the stack, or has the same precedence as the
 					// operator on the top of the stack and is right associative -- push it on the
 					// stack.
-					operatorStack.add(t);
+					operatorStack.push(t);
 				} else if (operators.contains(t.type)
-						&& (prec < topStackPrec || prec == topStackPrec && t.type != TokenType.OpPow)) {
+						&& (prec < topStackPrec || (prec == topStackPrec && t.type != TokenType.OpPow))) {
 					// If the incoming symbol is an operator and has either lower precedence than
 					// the operator on the top of the stack, or has the same precedence as the
 					// operator on the top of the stack and is left associative -- continue to pop
 					// the stack until this is not true. Then, push the incoming operator.
-					while ((operators.contains(t.type)
-							&& (prec < topStackPrec || prec == topStackPrec && t.type != TokenType.OpPow))) {
-						operatorStack.remove(operatorStack.size() - 1);
+					while (operators.contains(t.type)
+							&& (prec < topStackPrec || (prec == topStackPrec && t.type != TokenType.OpPow))) {
+						if (operators.contains((LaiLexer.TokenType) (operatorStack.peek()).type)) {
+							LaiLexer.Token operatorToken = operatorStack.peek();
+							LaiExpression expB = treeStack.pop();
+							LaiExpression expA = treeStack.pop();
+							LaiExpressionBasicMath expOp = null;
+
+							switch (operatorToken.type) {
+
+							case OpMathPlus:
+								expOp = new LaiExpressionAddition(expA, expB);
+								break;
+							case OpMathMinus:
+								expOp = new LaiExpressionMinus(expA, expB);
+								break;
+							case OpMathMultiply:
+								expOp = new LaiExpressionMultiply(expA, expB);
+								break;
+							case OpMathDivide:
+								expOp = new LaiExpressionDivide(expA, expB);
+								break;
+							default:
+								System.err.println("unsupported op");
+								break;
+							}
+							treeStack.push(expOp);
+
+							tokenPostfix.push(operatorStack.pop());
+						} else
+							operatorStack.pop();
 
 						// Reset the topStackPrec so that we dont c r a s h
 						if (operatorStack.size() > 0) {
-							if (operatorStack.get(operatorStack.size() - 1).type != TokenType.OpOpenParenthesis)
-								topStackPrec = precedence
-										.get(operators.indexOf(operatorStack.get(operatorStack.size() - 1).type));
+							if (operatorStack.peek().type != TokenType.OpOpenParenthesis)
+								topStackPrec = precedence.get(operators.indexOf(operatorStack.peek().type));
 						} else {
 							topStackPrec = -1;
 						}
 					}
-					operatorStack.add(t);
+					operatorStack.push(t);
 				}
 			}
 			// At the end of the expression, pop and print all operators on the stack. (No
 			// parentheses should remain.)
 			while (operatorStack.size() > 0) {
-				postfix.add(operatorStack.get(operatorStack.size() - 1));
-				operatorStack.remove(operatorStack.size() - 1);
+				if (operatorStack.peek().type != TokenType.OpOpenParenthesis) {
+					LaiLexer.Token operatorToken = operatorStack.peek();
+					LaiExpression expB = treeStack.pop();
+					LaiExpression expA = treeStack.pop();
+					LaiExpressionBasicMath expOp = null;
+
+					switch (operatorToken.type) {
+
+					case OpMathPlus:
+						expOp = new LaiExpressionAddition(expA, expB);
+						break;
+					case OpMathMinus:
+						expOp = new LaiExpressionMinus(expA, expB);
+						break;
+					case OpMathMultiply:
+						expOp = new LaiExpressionMultiply(expA, expB);
+						break;
+					case OpMathDivide:
+						expOp = new LaiExpressionDivide(expA, expB);
+						break;
+					default:
+						System.err.println("unsupported op");
+						break;
+					}
+					treeStack.push(expOp);
+					tokenPostfix.push(operatorStack.pop());
+				} else
+					operatorStack.pop();
 			}
 
-			System.out.print("ALG OUTPUT: ");
-			for (Object o : postfix) {
-				if (o instanceof LaiLexer.Identifier) {
-					System.out.print(((LaiLexer.Identifier) o).value);
-				} else if (o instanceof LaiLexer.Token) {
-					System.out.print(((LaiLexer.Token) o).type.name);
-				} else {
-					System.out.print("Fuck");
-				}
-				System.out.print(" ");
-			}
-			System.out.print("\n");
+			/*
+			 * System.out.print("ALG OUTPUT: "); for (Object o : tokenPostfix) { if (o
+			 * instanceof LaiLexer.ValuedToken) { System.out.print(((LaiLexer.ValuedToken)
+			 * o).value); } else if (o instanceof LaiLexer.Token) {
+			 * System.out.print(((LaiLexer.Token) o).type.name); } else {
+			 * System.out.print("that's really quite unfortunate"); } System.out.print(" ");
+			 * } System.out.print("\n"); // System.out.println("TREE SIZE: " +
+			 * treeStack.size());
+			 */
+			return treeStack.get(0);
 		}
 
-		return new AST.LaiExpressionStringLiteral("idfk");
+		// return new AST.LaiExpressionStringLiteral("idfk");
 
 	}
 

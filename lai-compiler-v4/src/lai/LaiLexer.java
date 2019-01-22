@@ -52,8 +52,8 @@ public class LaiLexer {
 		OpSemicolon(";"), OpOpenSquare("["), OpCloseSquare("]"), OpOpenBrace("{"), OpCloseBrace("}"),
 		OpOpenParenthesis("("), OpCloseParenthesis(")"), OpComma(","), OpDot("."),
 
-		OpMathPlus("+"), OpMathMinus("-"), OpMathMultiply("*"), OpMathDivide("/"), OpPow("^"), OpMathPlusEquals("+="),
-		OpMathMinusEquals("-="),
+		OpMathPlus("+"), OpMathMinus("-"), OpMathMultiply("*"), OpMathDivide("/"), OpPow("|||||||||||||||||||||||"),
+		OpMathPlusEquals("+="), OpMathMinusEquals("-="),
 
 		OpListIterate("::"),
 
@@ -94,7 +94,7 @@ public class LaiLexer {
 		}
 
 		private TokenType(String name, boolean isPrimitive) {
-			this(name, true, null);
+			this(name, isPrimitive, null);
 		}
 
 		private TokenType(String name, TokenType laiType) {
