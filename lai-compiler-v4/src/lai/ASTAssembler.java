@@ -3,6 +3,8 @@ package lai;
 import java.util.ArrayList;
 
 import lai.AST.*;
+import lai.AST.LaiType.Type;
+import lai.LaiLexer.TokenType;
 
 public class ASTAssembler {
 
@@ -487,31 +489,67 @@ public class ASTAssembler {
 	 * @param expression
 	 * @return
 	 */
-	private LaiExpression parseSingleTokenExpression(String filename, LaiLexer.Token expToken, LaiContents contents) {
+	private LaiExpression parseSingleTokenExpression(String filename, LaiLexer.Token expToken, LaiContents contents,
+			LaiList<LaiVariable> parameters) {
 
+		// ValuedToken = Literals and Identifier
 		if (!(expToken instanceof LaiLexer.ValuedToken)) { // Check that the token is a literal
 			Main.error(filename, expToken.lineNumber, expToken.charNumber,
-					"Can only parse primitive literals currently because I am rotisserie.");
+					"This doesn't look right. I don't feel very good Mr Stark.");
 			return null;
 		}
 
-		LaiExpression exp = null;
-		switch (expToken.type) {
-		case IntegerLiteral:
-			exp = new LaiExpressionIntLiteral(((LaiLexer.IntegerLiteral) expToken).value);
-			break;
-		case StringLiteral:
-			exp = new LaiExpressionStringLiteral(((LaiLexer.StringLiteral) expToken).value);
-			break;
-		case CharLiteral:
-			exp = new LaiExpressionCharLiteral(((LaiLexer.CharLiteral) expToken).value);
-			break;
-		default:
-			Main.error(filename, expToken.lineNumber, expToken.charNumber, "Literal not supported?");
-			break;
-		}
+		if (expToken instanceof LaiLexer.Identifier) {
+			LaiVariable var = null;
+			for (LaiVariable v : parameters.list_children) {
+				if (v.identifier.identifier.equals(((LaiLexer.Identifier) expToken).value)) {
+					var = v;
+					break;
+				}
+			}
+			if (var == null) {
+				for (LaiVariable v : contents.variables.list_children) {
+					if (v.identifier.identifier.equals(((LaiLexer.Identifier) expToken).value)) {
+						var = v;
+						break;
+					}
+				}
+			}
+			if (var == null) {
+				Main.error(filename, expToken.lineNumber, expToken.charNumber,
+						"Can not find variable '" + ((LaiLexer.Identifier) expToken).value + "'.");
+				return null;
+			}
 
-		return exp;
+			// We have now found the variable that this identifier references.
+			if (var.type.type == Type.LaiTypeUnknown) {
+				Main.error(filename, expToken.lineNumber, expToken.charNumber,
+						"Type inferences can not rely on variables of unknown type.");
+				return null;
+			}
+
+			return new LaiExpressionVariable(var);
+
+		} else {
+
+			LaiExpression exp = null;
+			switch (expToken.type) {
+			case IntegerLiteral:
+				exp = new LaiExpressionIntLiteral(((LaiLexer.IntegerLiteral) expToken).value);
+				break;
+			case StringLiteral:
+				exp = new LaiExpressionStringLiteral(((LaiLexer.StringLiteral) expToken).value);
+				break;
+			case CharLiteral:
+				exp = new LaiExpressionCharLiteral(((LaiLexer.CharLiteral) expToken).value);
+				break;
+			default:
+				Main.error(filename, expToken.lineNumber, expToken.charNumber, "Literal not supported?");
+				break;
+			}
+
+			return exp;
+		}
 	}
 
 	/**
@@ -553,10 +591,123 @@ public class ASTAssembler {
 			if (token.type == LaiLexer.TokenType.UnitializeValue) {
 				return new AST.LaiExpressionUninit();
 			}
-			return parseSingleTokenExpression(filename, token, contents);
+			return parseSingleTokenExpression(filename, token, contents, params);
+		} else {
+
+			// Implementation of Shunting Yard Algorithm
+			ArrayList<LaiLexer.TokenType> operators = new ArrayList<LaiLexer.TokenType>();
+			ArrayList<Integer> precedence = new ArrayList<Integer>();
+
+			operators.add(TokenType.OpMathPlus);
+			precedence.add(0);
+
+			operators.add(TokenType.OpMathMinus);
+			precedence.add(0);
+
+			operators.add(TokenType.OpMathDivide);
+			precedence.add(1);
+
+			operators.add(TokenType.OpMathMultiply);
+			precedence.add(1);
+
+			operators.add(TokenType.OpPow);
+			precedence.add(2);
+
+			ArrayList<Object> postfix = new ArrayList<Object>();
+			ArrayList<LaiLexer.Token> operatorStack = new ArrayList<LaiLexer.Token>();
+
+			for (int i = expressionTokenLocationStart; i < expressionTokenLocationStart + expressionLength; i++) {
+				LaiLexer.Token t = tokens.get(i);
+				int prec = -1;
+				int topStackPrec = -1;
+
+				if (operatorStack.size() > 0) {
+					if (operatorStack.get(operatorStack.size() - 1).type != TokenType.OpOpenParenthesis)
+						topStackPrec = precedence
+								.get(operators.indexOf(operatorStack.get(operatorStack.size() - 1).type));
+				}
+
+				if (operators.contains(t.type)) {
+					prec = precedence.get(operators.indexOf(t.type));
+				}
+
+				if (t.type == TokenType.Identifier) {// If the incoming symbol is an operand, print it.
+					postfix.add(t);
+				} else if (t.type == TokenType.OpOpenParenthesis) {// If the incoming symbol is a left
+																	// parenthesis, push it on the stack.
+					operatorStack.add(t);
+				} else if (t.type == TokenType.OpOpenParenthesis) {// If the incoming symbol is a right
+																	// parenthesis: discard the right
+																	// parenthesis, pop and print the stack
+																	// symbols until you see a left parenthesis.
+																	// Pop the left parenthesis and discard it.
+
+					// Pop and Print the stack symbols until ( encountered.
+					while (operatorStack.get(operatorStack.size() - 1).type != TokenType.OpOpenParenthesis) {
+						postfix.add(operatorStack.get(operatorStack.size() - 1));
+						operatorStack.remove(operatorStack.size() - 1);
+					}
+					// Pop and discard (.
+					operatorStack.remove(operatorStack.size() - 1);
+
+				} else if (operators.contains(t.type) && (operatorStack.size() == 0
+						|| operatorStack.get(operatorStack.size() - 1).type == TokenType.OpOpenParenthesis)) {
+					// If the incoming symbol is an operator and the stack is empty or contains a
+					// left parenthesis on top, push the incoming operator onto the stack.
+					operatorStack.add(t);
+
+				} else if (operators.contains(t.type)
+						&& (prec > topStackPrec || prec == topStackPrec && t.type == TokenType.OpPow)) {
+					// If the incoming symbol is an operator and has either higher precedence than
+					// the operator on the top of the stack, or has the same precedence as the
+					// operator on the top of the stack and is right associative -- push it on the
+					// stack.
+					operatorStack.add(t);
+				} else if (operators.contains(t.type)
+						&& (prec < topStackPrec || prec == topStackPrec && t.type != TokenType.OpPow)) {
+					// If the incoming symbol is an operator and has either lower precedence than
+					// the operator on the top of the stack, or has the same precedence as the
+					// operator on the top of the stack and is left associative -- continue to pop
+					// the stack until this is not true. Then, push the incoming operator.
+					while ((operators.contains(t.type)
+							&& (prec < topStackPrec || prec == topStackPrec && t.type != TokenType.OpPow))) {
+						operatorStack.remove(operatorStack.size() - 1);
+
+						// Reset the topStackPrec so that we dont c r a s h
+						if (operatorStack.size() > 0) {
+							if (operatorStack.get(operatorStack.size() - 1).type != TokenType.OpOpenParenthesis)
+								topStackPrec = precedence
+										.get(operators.indexOf(operatorStack.get(operatorStack.size() - 1).type));
+						} else {
+							topStackPrec = -1;
+						}
+					}
+					operatorStack.add(t);
+				}
+			}
+			// At the end of the expression, pop and print all operators on the stack. (No
+			// parentheses should remain.)
+			while (operatorStack.size() > 0) {
+				postfix.add(operatorStack.get(operatorStack.size() - 1));
+				operatorStack.remove(operatorStack.size() - 1);
+			}
+
+			System.out.print("ALG OUTPUT: ");
+			for (Object o : postfix) {
+				if (o instanceof LaiLexer.Identifier) {
+					System.out.print(((LaiLexer.Identifier) o).value);
+				} else if (o instanceof LaiLexer.Token) {
+					System.out.print(((LaiLexer.Token) o).type.name);
+				} else {
+					System.out.print("Fuck");
+				}
+				System.out.print(" ");
+			}
+			System.out.print("\n");
 		}
 
-		return new AST.LaiExpressionStringLiteral("LOL");
+		return new AST.LaiExpressionStringLiteral("idfk");
+
 	}
 
 	private LaiContents parseContent(String filename, ArrayList<LaiLexer.Token> tokens) {

@@ -1,14 +1,22 @@
 
-i := 100
+foobar := "blahblab"
+
+i := 100; 
 blah := 100 + 10
 
-j : int
+defaultInt : int
+defaultString : string
+defaultChar : char 
+
+letterA : char = 'a'
+
 k := blah + 10
 
 initthisvartonull : int = ?
 
-//thiswillerror : string = 12
-//thistoowillerrror : int = "string"
+thiswillerror : string = 12
+thistoowillerrror : int = "string"
+
 
 test : string = "Hello, Sailor!"
 

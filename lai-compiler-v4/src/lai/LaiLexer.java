@@ -52,7 +52,7 @@ public class LaiLexer {
 		OpSemicolon(";"), OpOpenSquare("["), OpCloseSquare("]"), OpOpenBrace("{"), OpCloseBrace("}"),
 		OpOpenParenthesis("("), OpCloseParenthesis(")"), OpComma(","), OpDot("."),
 
-		OpMathPlus("+"), OpMathMinus("-"), OpMathMultiply("*"), OpMathDivide("/"), OpMathPlusEquals("+="),
+		OpMathPlus("+"), OpMathMinus("-"), OpMathMultiply("*"), OpMathDivide("/"), OpPow("^"), OpMathPlusEquals("+="),
 		OpMathMinusEquals("-="),
 
 		OpListIterate("::"),

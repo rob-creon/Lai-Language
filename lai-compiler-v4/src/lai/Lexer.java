@@ -155,6 +155,10 @@ public class Lexer {
 
 					int value = Integer.parseInt(literalValue);
 					lexerFile.addToken(new LaiLexer.IntegerLiteral(lineNumber, charNumber, value));
+					
+					if(!isNumber(op)) {
+						charNumber--;
+					}
 					continue;
 
 				} else if (isLetter(op)) {

@@ -2,6 +2,8 @@ package lai;
 
 import java.util.ArrayList;
 
+import lai.AST.LaiType.Type;
+
 public class AST {
 
 	public static abstract class Node {
@@ -180,8 +182,6 @@ public class AST {
 
 		public LaiVariable(LaiIdentifier id, LaiType type, int identTokenPosition) {
 
-			System.out.println("Creating variable " + id.identifier + " to type " + type.type);
-
 			this.identifier = id;
 			this.type = type;
 			this.identTokenPosition = identTokenPosition;
@@ -317,6 +317,70 @@ public class AST {
 		@Override
 		protected LaiType getDefaultReturnType() {
 			return new LaiType(LaiType.Type.LaiTypeUnknown);
+		}
+
+	}
+
+	public static class LaiExpressionVariable extends LaiExpression {
+
+		public LaiVariable var;
+
+		public LaiExpressionVariable(LaiVariable var) {
+			this.var = var;
+			this.addChild(var);
+
+			super.returnType.type = var.type.type;
+		}
+
+		@Override
+		protected LaiType getDefaultReturnType() {
+			return new LaiType(Type.LaiTypeUnknown); // Overrided in the constructor.
+		}
+
+		@Override
+		protected String getDebugName() {
+			return "<LaiExpressionVariable>";
+		}
+
+	}
+
+	public static abstract class LaiExpressionBasicMath extends LaiExpression {
+		public LaiExpression expA;
+		public LaiExpression expB;
+
+		public LaiExpressionBasicMath(LaiExpression expA, LaiExpression expB) {
+			this.expA = expA;
+			this.expB = expB;
+
+			this.addChild(expA);
+			this.addChild(expB);
+		}
+	}
+
+	public static class LaiExpressionAddition extends LaiExpressionBasicMath {
+
+		public LaiExpressionAddition(LaiExpression expA, LaiExpression expB) {
+			super(expA, expB);
+		}
+
+		@Override
+		protected LaiType getDefaultReturnType() {
+			if (expA.returnType.type != expB.returnType.type) {
+				// There is only one case where this is okay, which is when the first expression
+				// is a string
+				if (expA.returnType.type == LaiType.Type.LaiString) {
+					return new LaiType(LaiType.Type.LaiString);
+				} else {
+					return new LaiType(LaiType.Type.LaiTypeUnknown);
+				}
+			} else {
+				return new LaiType(expA.returnType.type);
+			}
+		}
+
+		@Override
+		protected String getDebugName() {
+			return "<LaiExpressionAddition>";
 		}
 
 	}
