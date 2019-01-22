@@ -150,16 +150,20 @@ public class AST {
 
 		public ArrayList<LaiLexer.Token> bodyTokens = new ArrayList<LaiLexer.Token>();
 
-		public LaiFunction(LaiIdentifier identifier, LaiList<LaiVariable> params, LaiType type) {
-			this(identifier, params, type, new LaiContents());
+		public int identTokenPosition;
 
+		public LaiFunction(LaiIdentifier identifier, LaiList<LaiVariable> params, LaiType type,
+				int identTokenPosition) {
+			this(identifier, params, type, new LaiContents(), identTokenPosition);
 		}
 
-		public LaiFunction(LaiIdentifier identifier, LaiList<LaiVariable> params, LaiType type, LaiContents contents) {
+		public LaiFunction(LaiIdentifier identifier, LaiList<LaiVariable> params, LaiType type, LaiContents contents,
+				int identTokenPosition) {
 			this.identifier = identifier;
 			this.returnType = type;
 			this.params = params;
 			this.contents = contents;
+			this.identTokenPosition = identTokenPosition;
 
 			node_children.add(identifier);
 			node_children.add(type);
@@ -440,5 +444,25 @@ public class AST {
 		protected String getDebugName() {
 			return "<LaiExpressionDivide>";
 		}
+	}
+
+	public static class LaiStatementFunctionCall extends LaiStatement {
+
+		public LaiFunction function;
+		public LaiList<LaiExpression> params;
+
+		public LaiStatementFunctionCall(LaiFunction function, LaiList<LaiExpression> functionParams) {
+			this.function = function;
+			this.params = functionParams;
+
+			super.addChild(function);
+			super.addChild(functionParams);
+		}
+
+		@Override
+		protected String getDebugName() {
+			return "<LaiStatementFunctionCall>";
+		}
+
 	}
 }

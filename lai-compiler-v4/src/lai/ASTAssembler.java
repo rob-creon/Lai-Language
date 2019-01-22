@@ -47,6 +47,15 @@ public class ASTAssembler {
 		return true;
 	}
 
+	private void skipToEndOfLine() {
+		// Skip to the end of the line
+		while (token.type != LaiLexer.TokenType.OpSemicolon) {
+			if (nextToken() == TokenContext.END) {
+				Main.error(filename, token.lineNumber, token.charNumber, "Unexpected end of file.");
+			}
+		}
+	}
+
 	private void parseVariablesAndFunctionsToContent(String filename, ArrayList<LaiLexer.Token> tokens,
 			LaiContents contents) {
 		this.tokens = tokens;
@@ -189,7 +198,7 @@ public class ASTAssembler {
 						LaiType funcReturnType = AST.LaiType.convertLexerTypeToLaiType(token);
 
 						LaiFunction function = new LaiFunction(new LaiIdentifier(ident.value), parameters,
-								funcReturnType);
+								funcReturnType, ident_token_location);
 						contents.functions.addChild(function);
 
 						// Now we need to handle the function body, as that will be assembled to AST
@@ -284,11 +293,7 @@ public class ASTAssembler {
 							new LaiType(LaiType.Type.LaiTypeUnknown), ident_token_location));
 
 					// Skip to the end of the line
-					while (token.type != LaiLexer.TokenType.OpSemicolon) {
-						if (nextToken() == TokenContext.END) {
-							Main.error(filename, token.lineNumber, token.charNumber, "Unexpected end of file.");
-						}
-					}
+					skipToEndOfLine();
 				} else if (token.type == LaiLexer.TokenType.OpTypeDec) {
 					/*****************************************************************************
 					 * * * * * * * * * * * *VARIABLE DECLARATION EXPLICIT TYPE * * * * * * * * * *
@@ -305,6 +310,8 @@ public class ASTAssembler {
 					if (!token.type.isPrimitiveType) {
 						Main.error(filename, token.lineNumber, token.charNumber,
 								"Expected a type, but got '" + token.type.name + " instead.");
+						skipToEndOfLine();
+						continue tokenLoop;
 					}
 					LaiType varType = LaiType.convertLexerTypeToLaiType(token);
 					LaiVariable var = new LaiVariable(new LaiIdentifier(ident.value), varType, ident_token_location);
@@ -313,6 +320,7 @@ public class ASTAssembler {
 					// Check that the rest of the line is valid syntax.
 					if (nextToken() == TokenContext.END) {
 						Main.error(filename, token.lineNumber, token.charNumber, "Unexpected end of file.");
+						continue tokenLoop;
 					}
 
 					// This should now either be a ';' or '=' operator.
@@ -323,15 +331,12 @@ public class ASTAssembler {
 						// Uhoh
 						Main.error(filename, token.lineNumber, token.charNumber,
 								"Expected either a ; or =, but found " + token.type.name + " instead.");
+						skipToEndOfLine();
 						continue tokenLoop;
 					}
 
 					// Skip to the end of the line
-					while (token.type != LaiLexer.TokenType.OpSemicolon) {
-						if (nextToken() == TokenContext.END) {
-							Main.error(filename, token.lineNumber, token.charNumber, "Unexpected end of file.");
-						}
-					}
+					skipToEndOfLine();
 				} else {
 					continue;
 				}
@@ -341,6 +346,7 @@ public class ASTAssembler {
 
 	private void parseStatements(String filename, ArrayList<LaiLexer.Token> tokens, LaiContents contents,
 			LaiList<LaiVariable> params) {
+
 		this.tokens = tokens;
 		this.filename = filename;
 
@@ -358,113 +364,312 @@ public class ASTAssembler {
 
 			if (token.type == LaiLexer.TokenType.Identifier) {
 				// Check if this identifier has been created already
-				LaiVariable var = null;
+				LaiVariable localVar = null;
 				for (LaiVariable v : contents.variables.list_children) {
-					// v.identifier = new LaiIdentifier("woopsies");
 					if (v.identifier.identifier.equals(((LaiLexer.Identifier) token).value)) {
-						var = v;
-
+						localVar = v;
+						break;
 					}
 				}
-				if (var == null) {
+				LaiVariable paramVar = null;
+				for (LaiVariable v : params.list_children) {
+					if (v.identifier.identifier.equals(((LaiLexer.Identifier) token).value)) {
+						paramVar = v;
+						break;
+					}
+				}
+				LaiFunction function = null;
+				for (LaiFunction f : contents.functions.list_children) {
+					if (f.identifier.identifier.equals(((LaiLexer.Identifier) token).value)) {
+						function = f;
+						break;
+					}
+				}
+
+				// If it hasn't been defined, error. It should have been defined in the
+				// parseFunctionsAndVars()
+				if (localVar == null && paramVar == null && function == null) {
 					Main.error(filename, token.lineNumber, token.charNumber,
 							"Unknown identifier '" + ((LaiLexer.Identifier) token).value + "'.");
+					skipToEndOfLine();
 					continue tokenLoop;
 				}
-				// Check for matching identifiers in this local scope's variables.
 
-				if (var.identTokenPosition == tokenCTR) {
-					// this is a variable definition, which means we most likely need to initialize
-					// this variable with a SetVar statement, but we need to figure out what we are
-					// setting it to as well as the type.
+				// Verify it was only defined once!
+				int matchingIdentSum = ((localVar != null) ? 1 : 0) + ((paramVar != null) ? 1 : 0)
+						+ ((function != null) ? 1 : 0);
 
-					// Find the operator for setting the value. It will be the next token.
-					if (!safeNextToken())
-						continue tokenLoop;
+				if (matchingIdentSum != 1) {
+					Main.error(filename, token.lineNumber, token.charNumber,
+							"There are multiple definitions of " + ((LaiLexer.Identifier) token).value);
+					skipToEndOfLine();
+					continue tokenLoop;
+				}
 
-					if (token.type == LaiLexer.TokenType.OpInferTypeAssignValue) {
-						// :=
-						// The next token will be the beginning of the expression for the value of this
-						// variable. Just parse it. Get it's return type and use that to set the
-						// inferred type of this variable.
+				// If it's NOT a function, then it must be either a local variable or parameter
+				// variable, which should be treated the same.
+				if (localVar != null || paramVar != null) {
+
+					LaiVariable var = null;
+					if (localVar != null)
+						var = localVar;
+					if (paramVar != null)
+						var = paramVar;
+
+					if (var.identTokenPosition == tokenCTR) {
+						// this is a variable definition, which means we most likely need to initialize
+						// this variable with a SetVar statement, but we need to figure out what we are
+						// setting it to as well as the type.
+
+						// Find the operator for setting the value. It will be the next token.
 						if (!safeNextToken())
 							continue tokenLoop;
 
-						// Parse the expression and create the statement.
-						LaiExpression exp = parseExpression(filename, tokens, contents, params, tokenCTR);
-
-						if (var.type.type != AST.LaiType.Type.LaiTypeUnknown) {
-							Main.error(filename, token.lineNumber, token.charNumber, "The variable '"
-									+ var.identifier.identifier
-									+ "' was already type inferred. Cannot type infer a variable multiple times.");
-							continue tokenLoop;
-						}
-						// Because we found the type in the expression, we need 'infer' it and set the
-						// variable's type now.
-						var.type.type = exp.getReturnType().type;
-
-						if (!(exp instanceof LaiExpressionUninit)) {
-							contents.statements.addChild(new AST.LaiStatementSetVar(var, exp));
-						}
-
-					} else if (token.type == LaiLexer.TokenType.OpTypeDec) {
-						// :
-						// The next token will be the variable type.
-						if (!safeNextToken())
-							continue tokenLoop;
-						// We've already error checked that this is a type in the variable/function
-						// declaration parser. So we can just move onto the next token, which should be
-						// the = operator. If it's not then we can default initialize this.
-						if (nextToken() == TokenContext.END) {
-							Main.error(filename, token.lineNumber, token.charNumber, "Unexpected end of file.");
-							continue tokenLoop;
-						}
-
-						if (token.type == LaiLexer.TokenType.OpAssignValue) {
-							// The next token is the beginning of the expression to set this variable.
-							if (!safeNextToken())
-								continue tokenLoop;
+						if (token.type == LaiLexer.TokenType.OpInferTypeAssignValue) {
+							// :=
+							// The next token will be the beginning of the expression for the value of this
+							// variable. Just parse it. Get it's return type and use that to set the
+							// inferred type of this variable.
 
 							// Parse the expression and create the statement.
-							LaiExpression exp = parseExpression(filename, tokens, contents, params, tokenCTR);
+							LaiExpression exp = parseExpression(filename, tokens, contents, params, tokenCTR, -1);
+
+							if (var.type.type != AST.LaiType.Type.LaiTypeUnknown) {
+								Main.error(filename, token.lineNumber, token.charNumber, "The variable '"
+										+ var.identifier.identifier
+										+ "' was already type inferred. Cannot type infer a variable multiple times.");
+								skipToEndOfLine();
+								continue tokenLoop;
+							}
+							// Because we found the type in the expression, we need 'infer' it and set the
+							// variable's type now.
+							var.type.type = exp.getReturnType().type;
 
 							if (!(exp instanceof LaiExpressionUninit)) {
 								contents.statements.addChild(new AST.LaiStatementSetVar(var, exp));
 							}
 
-						} else if (token.type == LaiLexer.TokenType.OpSemicolon) {
-							// Default initializer. We can do that easily here.
+							skipToEndOfLine();
+							continue tokenLoop;
 
-							LaiExpression literal;
-
-							switch (var.type.type) {
-							case LaiInteger:
-								literal = new AST.LaiExpressionIntLiteral(0);
-								break;
-							case LaiString:
-								literal = new AST.LaiExpressionStringLiteral(""); // Empty non-null string
-								break;
-							case LaiChar:
-								literal = new AST.LaiExpressionCharLiteral('\u0000'); // Java code for null character,
-																						// often displayed as a square
-																						// or space in the terminal.
-								break;
-							default:
-								Main.error(filename, token.lineNumber, token.charNumber,
-										"Type does not support default initialization.");
+						} else if (token.type == LaiLexer.TokenType.OpTypeDec) {
+							// :
+							// The next token will be the variable type.
+							if (!safeNextToken())
+								continue tokenLoop;
+							// We've already error checked that this is a type in the variable/function
+							// declaration parser. So we can just move onto the next token, which should be
+							// the = operator. If it's not then we can default initialize this.
+							if (nextToken() == TokenContext.END) {
+								Main.error(filename, token.lineNumber, token.charNumber, "Unexpected end of file.");
+								skipToEndOfLine();
 								continue tokenLoop;
 							}
-							contents.statements.addChild(new AST.LaiStatementSetVar(var, literal));
+
+							if (token.type == LaiLexer.TokenType.OpAssignValue) {
+								// The next token is the beginning of the expression to set this variable.
+								if (!safeNextToken())
+									continue tokenLoop;
+
+								// Parse the expression and create the statement.
+								LaiExpression exp = parseExpression(filename, tokens, contents, params, tokenCTR, -1);
+
+								if (!(exp instanceof LaiExpressionUninit)) {
+									// Check the types match.
+									if (exp.returnType.type != var.type.type) {
+
+										Main.error(filename, token.lineNumber, token.charNumber,
+												"Expected a '" + var.type.type.name() + "', but got a '"
+														+ exp.returnType.type.name() + "' instead.");
+										skipToEndOfLine();
+										continue tokenLoop;
+									}
+									contents.statements.addChild(new AST.LaiStatementSetVar(var, exp));
+								}
+
+								skipToEndOfLine();
+								continue tokenLoop;
+
+							} else if (token.type == LaiLexer.TokenType.OpSemicolon) {
+								// Default initializer. We can do that easily here.
+
+								LaiExpression literal;
+
+								switch (var.type.type) {
+								case LaiInteger:
+									literal = new AST.LaiExpressionIntLiteral(0);
+									break;
+								case LaiString:
+									literal = new AST.LaiExpressionStringLiteral(""); // Empty non-null string
+									break;
+								case LaiChar:
+									literal = new AST.LaiExpressionCharLiteral('\u0000'); // Java code for null
+																							// character,
+																							// often displayed as a
+																							// square
+																							// or space in the terminal.
+									break;
+								default:
+									Main.error(filename, token.lineNumber, token.charNumber,
+											"Type does not support default initialization.");
+									continue tokenLoop;
+								}
+								contents.statements.addChild(new AST.LaiStatementSetVar(var, literal));
+								skipToEndOfLine();
+								continue tokenLoop;
+							}
+
+						} else {
+							Main.error(filename, token.lineNumber, token.charNumber,
+									"Expected : or := but got '" + token.type.name + "'.");
+							skipToEndOfLine();
+							continue tokenLoop;
 						}
 
+					} else if (var.identTokenPosition > tokenCTR) {
+						Main.error(filename, token.lineNumber, token.charNumber, "Variable used before declared.");
+						skipToEndOfLine();
+						continue tokenLoop;
 					} else {
-						Main.error(filename, token.lineNumber, token.charNumber,
-								"Expected : or := but got '" + token.type.name + "'.");
+						// This is a reference to the variable. Check what we are doing with it. We
+						// should be setting it.
+						if (!safeNextToken())
+							continue tokenLoop;
+						if (token.type != TokenType.OpAssignValue) {
+							Main.error(filename, token.lineNumber, token.charNumber,
+									"Expected = but got '" + token.type.name + "' instead.");
+							skipToEndOfLine();
+							continue tokenLoop;
+
+						}
+
+						// move forward to the beginning of the expression.
+						if (!safeNextToken())
+							continue tokenLoop;
+						// okay we now just need to evaluate the expression it is set to and type check
+						// it.
+						// Parse the expression and create the statement.
+						LaiExpression exp = parseExpression(filename, tokens, contents, params, tokenCTR, -1);
+
+						if (exp.returnType.type != var.type.type) {
+							Main.error(filename, token.lineNumber, token.charNumber,
+									"Expected a '" + var.type.type.name() + "', but got a '"
+											+ exp.returnType.type.name() + "' instead.");
+							skipToEndOfLine();
+							continue tokenLoop;
+						}
+						if (!(exp instanceof LaiExpressionUninit)) {
+							contents.statements.addChild(new AST.LaiStatementSetVar(var, exp));
+						}
+
+						skipToEndOfLine();
+						continue tokenLoop;
+					}
+				} else {
+					// Ah so it must be a function.
+
+					// Let's make sure this isn't the function definition. If it is, we have indexed
+					// the function's body earlier, so we can safely skip it now. If not, then this
+					// is a function call statement.
+
+					if (function.identTokenPosition == tokenCTR) {
+						// It's the definition.
+						// The LaiFunction object contains the token contents of the function body, so
+						// we can use the size of that to know how many tokens to skip. However, that is
+						// starting from the { of the function dec. So let's find that first.
+
+						while (token.type != TokenType.OpOpenBrace) {
+							if (!safeNextToken())
+								continue tokenLoop;
+						}
+
+						tokenCTR += function.bodyTokens.size() + 1;
+						token = tokens.get(tokenCTR);
+						// Below is a convenient way of double checking this.
+//						Main.error(filename, token.lineNumber, token.charNumber,
+//								"This is where the function ends. We added " + function.bodyTokens.size()
+//										+ " tokens to tokenCTR.");
 						continue tokenLoop;
 					}
 
-				} else if (var.identTokenPosition > tokenCTR) {
-					Main.error(filename, token.lineNumber, token.charNumber, "Variable used before declared.");
+					// This is a function call statement. That means
+					// that its return value doesn't matter because it is being used as a statement
+					// like such: "foo();" rather than "var = foo();". All we have to do is parse
+					// the params.
+
+					// Check that there are ().
+					if (!safeNextToken())
+						continue tokenLoop;
+					if (token.type != TokenType.OpOpenParenthesis) {
+						Main.error(filename, token.lineNumber, token.charNumber,
+								"Expected a '(' but got a '" + token.type.name + "' instead.");
+						skipToEndOfLine();
+						continue tokenLoop;
+					}
+
+					// Skip the (
+					if (!safeNextToken())
+						continue tokenLoop;
+					// We need to find the parameter expressions, splitting by comma.
+					int numParams = function.params.list_children.size();
+					LaiList<LaiExpression> functionParams = new LaiList<LaiExpression>("LaiExpression");
+
+					int currentExpressionStart = tokenCTR;
+					int currentExpressionEnd;
+					while (token.type != TokenType.OpCloseParenthesis) {
+
+						// safe
+						token = tokens.get(tokenCTR);
+						if (token.type == TokenType.OpCloseParenthesis) {
+							break;
+						}
+
+						if (!safeNextToken())
+							continue tokenLoop;
+
+						if (token.type == TokenType.OpComma || token.type == TokenType.OpCloseParenthesis) {
+							currentExpressionEnd = tokenCTR;
+							functionParams.addChild(parseExpression(filename, tokens, contents, params,
+									currentExpressionStart, currentExpressionEnd));
+
+							// Parse expression doesn't end in the right place. We need to correct the
+							// tokenCTR.
+							tokenCTR = currentExpressionEnd;
+
+							// Now we can reset the expression markers.
+							currentExpressionStart = tokenCTR + 1;
+							currentExpressionEnd = -2; // I want an error if this value is used. I used -2 because -1 is
+														// the way to make the parseExpression function just go until
+														// reaching a ;.
+
+						}
+					}
+
+					if (numParams != functionParams.list_children.size()) {
+						Main.error(filename, token.lineNumber, token.charNumber, "Expected " + numParams
+								+ " arguments, but found " + functionParams.list_children.size() + ".");
+						skipToEndOfLine();
+						continue tokenLoop;
+					}
+					// We need to type check the params.
+					for (int argumentID = 0; argumentID < numParams; argumentID++) {
+
+						LaiType.Type foundType = functionParams.list_children.get(argumentID).returnType.type;
+						LaiType.Type expectedType = function.params.list_children.get(argumentID).type.type;
+
+						if (foundType != expectedType) {
+							Main.error(filename, token.lineNumber, token.charNumber,
+									"Argument mismatch on argument (id=" + argumentID + ", where id starts at 0). Expected "
+											+ expectedType.name() + ", but got " + foundType.name() + " instead.");
+							skipToEndOfLine();
+							continue tokenLoop;
+						}
+					}
+
+					// Now that we have the params, we can create the function call statement.
+					LaiStatementFunctionCall call = new LaiStatementFunctionCall(function, functionParams);
+					contents.statements.addChild(call);
+					skipToEndOfLine();
 					continue tokenLoop;
 				}
 			} else {
@@ -474,11 +679,7 @@ public class ASTAssembler {
 		}
 
 		// Skip to the end of the line
-		while (token.type != LaiLexer.TokenType.OpSemicolon) {
-			if (nextToken() == TokenContext.END) {
-				Main.error(filename, token.lineNumber, token.charNumber, "Unexpected end of file.");
-			}
-		}
+		skipToEndOfLine();
 
 	}
 
@@ -563,9 +764,8 @@ public class ASTAssembler {
 	 * @param expressionTokenLocationStart
 	 * @return
 	 */
-	@SuppressWarnings("rawtypes")
 	private LaiExpression parseExpression(String filename, ArrayList<LaiLexer.Token> tokens, LaiContents contents,
-			LaiList<LaiVariable> params, int expressionTokenLocationStart) {
+			LaiList<LaiVariable> params, int expressionTokenLocationStart, int expressionTokenLocationEnd) {
 		this.tokenCTR = expressionTokenLocationStart;
 		this.tokens = tokens;
 		this.filename = filename;
@@ -579,12 +779,16 @@ public class ASTAssembler {
 
 		// Find the length of the expression.
 		int expressionLength = 1;
-		while (nextToken() == TokenContext.NORMAL) {
-			expressionLength++;
-		}
+		if (expressionTokenLocationEnd == -1) {
+			while (nextToken() == TokenContext.NORMAL) {
+				expressionLength++;
+			}
 
-		// Go back to the beginning of the expression
-		tokenCTR -= expressionLength;
+			// Go back to the beginning of the expression
+			tokenCTR -= expressionLength;
+		} else {
+			expressionLength = expressionTokenLocationEnd - expressionTokenLocationStart;
+		}
 		token = tokens.get(tokenCTR);
 
 		// If it is only one thing then we know we just need to parse this as either a
@@ -615,7 +819,6 @@ public class ASTAssembler {
 			precedence.add(2);
 
 			Stack<Object> tokenPostfix = new Stack<Object>();
-			// Stack<LaiExpression> astPostfix = new Stack<LaiExpression>();
 
 			Stack<LaiLexer.Token> operatorStack = new Stack<LaiLexer.Token>();
 			Stack<LaiExpression> treeStack = new Stack<LaiExpression>();

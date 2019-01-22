@@ -1,3 +1,9 @@
+add(a : int, b : int) : int{
+	return a + b
+}
+
+add(4, 11)
+
 A := 1
 B := 2
 C := 3
@@ -6,7 +12,13 @@ E := 5
 
 z := C+D+E+A*B-C/D
 
-w := 3*(2+3)
+test : int = A + z + B
+
+test2 : string = "scoopity poop"
+
+test2 = "nop"
+
+w := "neat"*("hm"+"ok"+"wow")
 //1+2+3+4*6/7+8
 //
 
