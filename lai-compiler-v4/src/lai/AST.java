@@ -54,7 +54,7 @@ public class AST {
 
 		public LaiFile(String filename) {
 			this.filename = filename;
-			this.contents = new LaiContents("File Origin");
+			this.contents = new LaiContents();
 		}
 
 		@Override
@@ -75,14 +75,7 @@ public class AST {
 		public LaiList<LaiVariable> variables;
 		public LaiList<LaiStatement> statements;
 
-		protected LaiContents(LaiContents copy) {
-			this.node_parent = copy.node_parent;
-			this.functions = new LaiList<LaiFunction>(copy.functions);
-			this.variables = new LaiList<LaiVariable>(copy.variables);
-			this.statements = new LaiList<LaiStatement>(copy.statements);
-		}
-
-		protected LaiContents(String deb) {
+		protected LaiContents() {
 			functions = new LaiList<LaiFunction>("LaiFunction");
 			variables = new LaiList<LaiVariable>("LaiVariable");
 			statements = new LaiList<LaiStatement>("LaiStatement");
@@ -205,6 +198,7 @@ public class AST {
 		public LaiContents contents;
 
 		public boolean isCImport;
+		public String Cname;
 
 		public ArrayList<LaiLexer.Token> bodyTokens = new ArrayList<LaiLexer.Token>();
 
@@ -212,8 +206,7 @@ public class AST {
 
 		public LaiFunction(LaiIdentifier identifier, LaiList<LaiVariable> params, LaiType type, int identTokenPosition,
 				boolean isCImport) {
-			this(identifier, params, type, new LaiContents("from " + identifier.identifier), identTokenPosition,
-					isCImport);
+			this(identifier, params, type, new LaiContents(), identTokenPosition, isCImport);
 		}
 
 		public LaiFunction(LaiIdentifier identifier, LaiList<LaiVariable> params, LaiType type, LaiContents contents,

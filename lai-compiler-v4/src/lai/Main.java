@@ -1,6 +1,11 @@
 package lai;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Scanner;
 
@@ -182,10 +187,60 @@ public class Main {
 
 		Backend code_generator = new BackendC(ast.files);
 		System.out.println("\n\nCompiled Code:");
+
+		String cCode = code_generator.compile();
 		System.out.println(code_generator.compile());
+
+		writeGeneratedCodeToFile(cCode);
+
+		if (flags.contains("-visualstudio")) {
+			compileCVisualStudio();
+		}
 	}
 
-	public static void cancelWithErrors(int numOfErrors) {
+	private static void writeGeneratedCodeToFile(String s) {
+		PrintWriter out = null;
+		try {
+			out = new PrintWriter("output.c");
+			out.write(s);
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+
+		} finally {
+			if (out != null)
+				out.close();
+		}
+	}
+
+	private static String compileVS = "findVS.bat";
+
+	private static void compileCVisualStudio() {
+
+		ProcessBuilder builder = new ProcessBuilder("cmd.exe", "/c", compileVS);
+		builder.redirectErrorStream(true);
+		Process p;
+		try {
+			p = builder.start();
+
+			// TODO Auto-generated catch block
+
+			BufferedReader r = new BufferedReader(new InputStreamReader(p.getInputStream()));
+			String line;
+			while (true) {
+
+				line = r.readLine();
+
+				if (line == null) {
+					break;
+				}
+				System.out.println(line);
+			}
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+
+	private static void cancelWithErrors(int numOfErrors) {
 		System.out.println("\n\nCompilation failed with " + numOfErrors + " errors.");
 		System.exit(0);
 	}

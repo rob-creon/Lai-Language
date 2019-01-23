@@ -68,6 +68,12 @@ public class ASTAssembler {
 				continue;
 			}
 
+			// Skip the keyword and it's identifier
+			if (token.type == LaiLexer.TokenType.KeywordCExtern) {
+				tokenCTR++;
+				continue;
+			}
+
 			if (token.type == LaiLexer.TokenType.Identifier) {
 				// If it is an identifier, figure out what it's doing. Is it declaring a
 				// variable or a function? Or is it referencing an existing var or function?
@@ -372,8 +378,20 @@ public class ASTAssembler {
 					continue tokenLoop;
 				}
 
+				// The next token is the C native name of this function.
+				if (!safeNextToken())
+					continue tokenLoop;
+
+				if (token.type != LaiLexer.TokenType.Identifier) {
+					Main.error(filename, token.lineNumber, token.charNumber,
+							"The C import keyword must be followed by the C native identifier.");
+					return;
+				}
+
+				this_function.Cname = ((LaiLexer.Identifier) token).value;
+
 				// Count the number of tokens in the imported function body. it must not contain
-				// anything except the CExtern keyword.
+				// anything except the CExtern keyword and C identifier.
 				int nonSemicolonTokenCount = 0;
 				for (int i = 0; i < tokens.size(); ++i) {
 					if (tokens.get(i).type != TokenType.OpSemicolon) {
@@ -383,10 +401,10 @@ public class ASTAssembler {
 						}
 					}
 				}
-				if (nonSemicolonTokenCount > 1) {
+				if (nonSemicolonTokenCount > 2) {
 					Main.error(filename, token.lineNumber, token.charNumber,
 							"An imported C function must have an empty body. example: print(print_stream : string) : void {"
-									+ TokenType.KeywordCExtern.name + "}");
+									+ TokenType.KeywordCExtern.name + " printf}");
 					skipToEndOfLine();
 					continue tokenLoop;
 				}
@@ -1035,12 +1053,7 @@ public class ASTAssembler {
 		this.tokens = tokens;
 		this.filename = filename;
 
-		String id = "file[]";
-		if (params.list_children.size() > 0) {
-			id = "function()";
-		}
-
-		LaiContents contents = new LaiContents("parseContent(" + id + ")");
+		LaiContents contents = new LaiContents();
 
 		this.parseVariablesAndFunctionsToContent(filename, tokens, contents);
 		this.parseStatements(filename, tokens, contents, params, this_function);
