@@ -1,13 +1,8 @@
-add(a : int, b : int) : int{
-	aosdm := "nice"
-	//return a + b
-}
-
 print(print_stream : string) : int {
 	_import_C
 }
 
-add(4, 11)
+print("Hello World!")
 
 A := 1
 B := 2
@@ -24,9 +19,3 @@ test2 : string = "scoopity poop"
 test2 = "nop"
 
 w := "neat"*("hm"+"ok"+"wow")
-//1+2+3+4*6/7+8
-//
-
-//(b +c * 9 +5^2) + 10 * 10
-
-//a := (b +c * 9 +5^2) + 10 * (lai_string_to_int("10"))

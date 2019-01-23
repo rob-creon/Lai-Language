@@ -1,0 +1,10 @@
+print(print_stream : string) : int {
+	_import_C printf
+}
+
+shell(shell_stream : string) : int {
+	_import_C system
+}
+
+print("Hello World!\n")
+shell("PAUSE")
