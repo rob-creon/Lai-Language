@@ -6,5 +6,10 @@ shell(shell_stream : string) : int {
 	_import_C system
 }
 
-print("Hello World!\n")
+myFunction() : string {
+	
+}
+
+
+print("Hello World\n")
 shell("PAUSE")

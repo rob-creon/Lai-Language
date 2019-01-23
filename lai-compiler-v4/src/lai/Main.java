@@ -196,6 +196,9 @@ public class Main {
 		if (flags.contains("-visualstudio")) {
 			compileCVisualStudio();
 		}
+		if (flags.contains("-gcc")) {
+			compileCGCC();
+		}
 	}
 
 	private static void writeGeneratedCodeToFile(String s) {
@@ -209,6 +212,27 @@ public class Main {
 		} finally {
 			if (out != null)
 				out.close();
+		}
+	}
+
+	private static void compileCGCC() {
+
+		try {
+			Process p = Runtime.getRuntime().exec("gcc output.c");
+
+			BufferedReader r = new BufferedReader(new InputStreamReader(p.getInputStream()));
+			String line;
+			while (true) {
+
+				line = r.readLine();
+
+				if (line == null) {
+					break;
+				}
+				System.out.println(line);
+			}
+		} catch (IOException e) {
+			e.printStackTrace();
 		}
 	}
 

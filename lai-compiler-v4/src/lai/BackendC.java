@@ -35,6 +35,11 @@ public class BackendC extends Backend {
 		}
 	}
 
+	private String getVariableSignature(LaiVariable v) {
+		//return 
+		return "";
+	}
+
 	private String assembleFunctionSignature(LaiFunction f) {
 
 		String type = getCTypeFromLai(f.returnType);
