@@ -1,0 +1,1 @@
+java --class-path bin lai.Main $1 -gcc
