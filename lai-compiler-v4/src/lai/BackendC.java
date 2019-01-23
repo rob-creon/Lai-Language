@@ -2,18 +2,23 @@ package lai;
 
 import java.util.ArrayList;
 
-import lai.AST.*;
+import lai.AST.LaiContents;
+import lai.AST.LaiFile;
+import lai.AST.LaiFunction;
+import lai.AST.LaiType;
+import lai.AST.LaiVariable;
 
 public class BackendC extends Backend {
 
 	private ArrayList<LaiFile> files;
+	public String functionDeclarations;
 
 	public BackendC(ArrayList<LaiFile> files) {
 		this.files = files;
 	}
 
 	private String getIncludes() {
-		return "#include <stdio.h>\n#include <stdlib.h>\n";
+		return "#include <stdio.h>\n#include <stdlib.h>\n#include <stdint.h>\n";
 	}
 
 	private String getCTypeFromLai(LaiType type) {
@@ -35,69 +40,74 @@ public class BackendC extends Backend {
 		}
 	}
 
-	private String getVariableSignature(LaiVariable v) {
-		//return 
-		return "";
-	}
+	private String getFunctionSignature(LaiFunction f, String prefix) {
+		String output = "";
+		// Function type and name
+		output += getCTypeFromLai(f.returnType) + " " + prefix + f.identifier.identifier + "(";
 
-	private String assembleFunctionSignature(LaiFunction f) {
+		// Function parameters
+		for (int i = 0; i < f.params.list_children.size(); ++i) {
+			LaiVariable p = f.params.list_children.get(i);
+			output += getCTypeFromLai(p.type) + " " + prefix + f.identifier.identifier + p.identifier.identifier;
+			// arg vars should have the prefix for consistency and simplicity.
 
-		String type = getCTypeFromLai(f.returnType);
-		String name = f.identifier.identifier;
-
-		return type + " " + name;
-	}
-
-	private String getFunctionForwardDeclarations() {
-		String declarations = "";
-		for (LaiFile fileNode : files) {
-			for (LaiFunction f : fileNode.contents.functions.list_children) {
-				if (f.isCImport) {
-					// The function is already natively supported in C. We have no use for it's
-					// definition.
-				} else {
-					declarations += assembleFunctionSignature(f) + "();\n";
-				}
+			if (i != f.params.list_children.size() - 1) {
+				output += ", ";
 			}
 		}
-		return declarations;
+		output += ")";
+		return output;
 	}
 
-	private String getStatements() {
+	private String parseFunctionDeclarations(LaiContents c, String prefix) {
 
-		String statements = "int main(void) {";
-
-		for (LaiFile fileNode : files) {
-			for (LaiStatement f : fileNode.contents.statements.list_children) {
-				if (f instanceof LaiStatementFunctionCall) {
-					LaiStatementFunctionCall call = (LaiStatementFunctionCall) f;
-
-					String CFunctionName = call.function.identifier.identifier;
-					if (call.function.isCImport) {
-						CFunctionName = call.function.Cname;
-					}
-					statements += CFunctionName + "(";
-
-					// Create params string
-					String params = "";
-					for (int i = 0; i < call.params.list_children.size(); ++i) {
-						LaiExpression e = call.params.list_children.get(i);
-						if (e instanceof LaiExpressionStringLiteral) {
-							LaiExpressionStringLiteral lesl = (LaiExpressionStringLiteral) e;
-							params += "\"" + lesl.literalValue + "\"";
-						}
-					}
-					statements += params + ");";
-				}
+		String output = "";
+		for (LaiFunction f : c.functions.list_children) {
+			if (!f.isCImport) { // C imported functions dont need to be declared
+				output += getFunctionSignature(f, prefix) + ";\n";
+				output += parseFunctionDeclarations(f.contents, prefix + f.identifier.identifier);
 			}
 		}
-		statements += "}";
 
-		return statements;
+		return output;
+	}
+
+	private String parseFunctionDefinitions(LaiContents c, String prefix) {
+		String output = "";
+		for (LaiFunction f : c.functions.list_children) {
+			if (!f.isCImport) { // C imported functions dont need to be declared
+				output += getFunctionSignature(f, prefix) + "{";
+				output += parseContents(c, prefix, false);
+				output += parseFunctionDefinitions(f.contents, prefix + f.identifier.identifier);
+			}
+		}
+
+		return output;
+	}
+
+	private String parseContents(LaiContents contents, String localPrefix, boolean isMain) {
+		String output = "";
+
+		if (isMain) {
+			output += "\nint main() {\n";
+		}
+
+		if (isMain) {
+			output += "\n}";
+		}
+		return output;
 	}
 
 	@Override
 	public String compile() {
-		return getIncludes() + getFunctionForwardDeclarations() + getStatements();
+		String output = "";
+
+		output += getIncludes();
+		for (LaiFile f : files)
+			output += parseFunctionDeclarations(f.contents, "lai_glob_")
+					+ parseFunctionDefinitions(f.contents, "lai_glob_") + parseContents(f.contents, "lai_glob_", true);
+
+		return output;
 	}
+
 }

@@ -11,6 +11,9 @@ public class ASTAssembler {
 
 	public ArrayList<LaiFile> files;
 
+	private ArrayList<LaiFunction> globalFunctions;
+	private ArrayList<LaiVariable> globalVariables;
+
 	private int tokenCTR = 0;
 	private LaiLexer.Token token;
 	private String filename;
@@ -19,6 +22,8 @@ public class ASTAssembler {
 
 	public ASTAssembler() {
 		files = new ArrayList<LaiFile>();
+		globalFunctions = new ArrayList<AST.LaiFunction>();
+		globalVariables = new ArrayList<AST.LaiVariable>();
 	}
 
 	private enum TokenContext {
@@ -57,7 +62,7 @@ public class ASTAssembler {
 	}
 
 	private void parseVariablesAndFunctionsToContent(String filename, ArrayList<LaiLexer.Token> tokens,
-			LaiContents contents) {
+			LaiContents contents, LaiFunction this_function) {
 		this.tokens = tokens;
 		this.filename = filename;
 
@@ -205,6 +210,10 @@ public class ASTAssembler {
 
 						LaiFunction function = new LaiFunction(new LaiIdentifier(ident.value), parameters,
 								funcReturnType, ident_token_location, false);
+						if (this_function == null) {
+							globalFunctions.add(function);
+						}
+
 						contents.functions.addChild(function);
 
 						// Now we need to handle the function body, as that will be assembled to AST
@@ -433,6 +442,37 @@ public class ASTAssembler {
 					}
 				}
 
+				if (function == null) {
+					for (LaiFunction f : globalFunctions) {
+						if (f.identifier.identifier.equals(((LaiLexer.Identifier) token).value)) {
+							function = f;
+							break;
+						}
+					}
+				}
+				if (localVar == null) {
+					for (LaiVariable f : globalVariables) {
+						if (f.identifier.identifier.equals(((LaiLexer.Identifier) token).value)) {
+							localVar = f;
+							break;
+						}
+					}
+				}
+
+				/*
+				 * // If we are inside a function body and we havent found a local function if
+				 * (function == null && this_function != null) { // Recursively check up the
+				 * tree for the function ArrayList<LaiFunction> inheritedFuncs = new
+				 * ArrayList<LaiFunction>(); Node n = this_function.node_parent; while (n !=
+				 * null) { if (n instanceof AST.LaiContents)
+				 * inheritedFuncs.addAll(((AST.LaiContents) n).functions.list_children); n =
+				 * n.node_parent; }
+				 * 
+				 * for (LaiFunction f : inheritedFuncs) { if
+				 * (f.identifier.identifier.equals(((LaiLexer.Identifier) token).value)) {
+				 * function = f; break; } } }
+				 */
+
 				// If it hasn't been defined, error. It should have been defined in the
 				// parseFunctionsAndVars()
 				if (localVar == null && paramVar == null && function == null) {
@@ -573,7 +613,7 @@ public class ASTAssembler {
 							continue tokenLoop;
 						}
 
-					} else if (var.identTokenPosition > tokenCTR) {
+					} else if (var.identTokenPosition > tokenCTR && paramVar == null) {
 						Main.error(filename, token.lineNumber, token.charNumber, "Variable used before declared.");
 						skipToEndOfLine();
 						continue tokenLoop;
@@ -1055,7 +1095,7 @@ public class ASTAssembler {
 
 		LaiContents contents = new LaiContents();
 
-		this.parseVariablesAndFunctionsToContent(filename, tokens, contents);
+		this.parseVariablesAndFunctionsToContent(filename, tokens, contents, this_function);
 		this.parseStatements(filename, tokens, contents, params, this_function);
 
 		for (LaiFunction f : contents.functions.list_children) {

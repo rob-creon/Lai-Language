@@ -2,6 +2,8 @@ package lai;
 
 import java.util.ArrayList;
 
+import lai.LaiLexer.TokenType;
+
 public class Lexer {
 
 	private class LexerFile {
@@ -294,6 +296,11 @@ public class Lexer {
 					}
 
 					lexerFile.addToken(new LaiLexer.Token(lineNumber, charNumber, possibleOps.get(0)));
+
+					if (possibleOps.get(0) == TokenType.OpOpenBrace) {
+						// Insert a semicolon to make parsing less buggy in AST.
+						lexerFile.addToken(new LaiLexer.Token(lineNumber, charNumber, LaiLexer.TokenType.OpSemicolon));
+					}
 					continue;
 				} else {
 					Main.error(filename, lineNumber, charNumber, "Could not parse char '" + op + "'.", line);

@@ -1,15 +1,40 @@
-print(print_stream : string) : int {
-	_import_C printf
+print(print_stream : string) : int {_import_C printf;}
+print_i1(print_stream : string, arg1 : int) : int {_import_C printf;}
+print_i2(print_stream : string, arg1 : int, arg2 : int) : int {_import_C printf;}
+shell(shell_stream : string) : int {_import_C system;}
+
+printSum(argA : int, argB : int) : int {
+	print_i2("%d + %d", argA, argB)
+	print(" = ")
+	
+	sum := argA + argB
+	print_i1("%d", sum)
+	
+	print("\n")
 }
 
-shell(shell_stream : string) : int {
-	_import_C system
-}
 
-myFunction() : string {
+
+recursiveMultiply(Av:int,Bv:int):int{
+	
+	tick(Av, 0, Bv)
+	
+	tick(A:int, sumSoFar:int, ctr:int):int{
+		print("Tick: ")
+		print_i1("%d", sumSoFar)
+		print("\n")
+		
+		sumSoFar = sumSoFar + 1
+		
+		ctr = ctr - 1
+		
+		//tick(A, sumSoFar, ctr)
+}
+	
 	
 }
 
-
 print("Hello World\n")
+printSum(5, 6)
+recursiveMultiply(1,2)
 shell("PAUSE")

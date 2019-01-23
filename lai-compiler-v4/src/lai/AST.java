@@ -109,11 +109,6 @@ public class AST {
 			this.list_children = new ArrayList<T>();
 		}
 
-		public LaiList(LaiList<T> copy) {
-			this.debugName = copy.debugName;
-			this.list_children = new ArrayList<T>(copy.list_children);
-		}
-
 		@SuppressWarnings("unchecked")
 		@Override
 		public void addChild(Node n) {
@@ -122,6 +117,9 @@ public class AST {
 			} catch (Exception e) {
 				System.err.println("COMPILER ERROR: " + "tried to add incompatible type to AST.LaiList<T>");
 				return;
+			}
+			if (n instanceof AST.LaiStatementFunctionCall) {
+				System.out.println();
 			}
 			n.node_parent = this;
 		}
