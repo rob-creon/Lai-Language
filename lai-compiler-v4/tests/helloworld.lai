@@ -1,48 +1,33 @@
 print(print_stream : string) : int { _import_C printf; }
 print_i1(print_stream : string, arg1 : int) : int { _import_C printf; }
 print_i2(print_stream : string, arg1 : int, arg2 : int) : int { _import_C printf; }
+print_i3(print_stream : string, arg1 : int, arg2 : int, arg3 : int) : int { _import_C printf; }
+
 shell(shell_stream : string) : int { _import_C system; }
 
+product := 0
 
+recursiveMultiply(va:int,vb:int):int{
+	
+	value_a := va
+	value_b := vb
 
-printSum(argA : int, argB : int) : int {
-	print_i2("%d + %d", argA, argB)
-	print(" = ")
+	myFunction(1, value_a, value_b)
 	
-	sum := argA + argB
-	print_i1("%d", sum)
+	print_i3("%d * %d = %d\n", value_a, value_b, product)
 	
-	print("\n")
-}
-
-recursiveMultiply(Av:int,Bv:int):int{
-	
-	tick(Av, 0, Bv)
-	//print_i1("%d")
-	
-	globalVar = 0;
-	
-	localFunc():int{
+	myFunction(ctr : int, a:int, b:int) : int {
+		product = product + a
+		//Order of operations! :D
 		
-	}
-	
-	tick(A:int, sumSoFar:int, ctr:int):int{
-		print("Tick: ")
-		print_i1("%d", sumSoFar)
-		print("\n")
-		
-		sumSoFar = sumSoFar + 1
-		
-		ctr = ctr - 1
-		
-		//localFunc()
-		tick(A, sumSoFar, ctr)
+		if(ctr != b) {
+			myFunction(ctr + 1,a,b)
+		}
 	}
 }
 
 globalVar : int = 100
 
 print("Hello World\n")
-printSum(5, 6)
-recursiveMultiply(1,2)
+recursiveMultiply(1000,5)
 shell("PAUSE")
