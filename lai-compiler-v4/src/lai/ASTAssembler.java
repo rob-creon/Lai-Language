@@ -14,6 +14,9 @@ public class ASTAssembler {
 	private ArrayList<LaiFunction> globalFunctions;
 	private ArrayList<LaiVariable> globalVariables;
 
+	private ArrayList<ArrayList<AST.LaiFunction>> functionScope;
+	private ArrayList<ArrayList<AST.LaiVariable>> variableScope;
+
 	private int tokenCTR = 0;
 	private LaiLexer.Token token;
 	private String filename;
@@ -24,6 +27,9 @@ public class ASTAssembler {
 		files = new ArrayList<LaiFile>();
 		globalFunctions = new ArrayList<AST.LaiFunction>();
 		globalVariables = new ArrayList<AST.LaiVariable>();
+
+		functionScope = new ArrayList<ArrayList<AST.LaiFunction>>();
+		variableScope = new ArrayList<ArrayList<AST.LaiVariable>>();
 	}
 
 	private enum TokenContext {
@@ -365,6 +371,8 @@ public class ASTAssembler {
 		this.tokens = tokens;
 		this.filename = filename;
 
+		// functionScope.addAll(c);
+
 		if (params == null) {
 			// Prevent null exceptions
 			params = new LaiList<LaiVariable>("LaiVariable");
@@ -442,18 +450,23 @@ public class ASTAssembler {
 					}
 				}
 
+				LaiFunction inheritedFunc = null;
 				if (function == null) {
-					for (LaiFunction f : globalFunctions) {
-						if (f.identifier.identifier.equals(((LaiLexer.Identifier) token).value)) {
-							function = f;
-							break;
+					for (ArrayList<LaiFunction> list : functionScope) {
+						for (LaiFunction f : list) {
+							if (f.identifier.identifier.equals(((LaiLexer.Identifier) token).value)) {
+								inheritedFunc = f;
+								break;
+							}
 						}
 					}
 				}
-				if (localVar == null) {
-					for (LaiVariable f : globalVariables) {
+
+				LaiVariable inheritedVar = null;
+				for (ArrayList<LaiVariable> list : variableScope) {
+					for (LaiVariable f : list) {
 						if (f.identifier.identifier.equals(((LaiLexer.Identifier) token).value)) {
-							localVar = f;
+							inheritedVar = f;
 							break;
 						}
 					}
@@ -475,7 +488,8 @@ public class ASTAssembler {
 
 				// If it hasn't been defined, error. It should have been defined in the
 				// parseFunctionsAndVars()
-				if (localVar == null && paramVar == null && function == null) {
+				if (localVar == null && paramVar == null && function == null && inheritedVar == null
+						&& inheritedFunc == null) {
 					Main.error(filename, token.lineNumber, token.charNumber,
 							"Unknown identifier '" + ((LaiLexer.Identifier) token).value + "'.");
 					skipToEndOfLine();
@@ -484,7 +498,8 @@ public class ASTAssembler {
 
 				// Verify it was only defined once!
 				int matchingIdentSum = ((localVar != null) ? 1 : 0) + ((paramVar != null) ? 1 : 0)
-						+ ((function != null) ? 1 : 0);
+						+ ((function != null) ? 1 : 0) + ((inheritedVar != null) ? 1 : 0)
+						+ ((inheritedFunc != null) ? 1 : 0);
 
 				if (matchingIdentSum != 1) {
 					Main.error(filename, token.lineNumber, token.charNumber,
@@ -495,13 +510,15 @@ public class ASTAssembler {
 
 				// If it's NOT a function, then it must be either a local variable or parameter
 				// variable, which should be treated the same.
-				if (localVar != null || paramVar != null) {
+				if (localVar != null || paramVar != null || inheritedVar != null) {
 
 					LaiVariable var = null;
 					if (localVar != null)
 						var = localVar;
 					if (paramVar != null)
 						var = paramVar;
+					if (inheritedVar != null)
+						var = inheritedVar;
 
 					if (var.identTokenPosition == tokenCTR) {
 						// this is a variable definition, which means we most likely need to initialize
@@ -613,7 +630,7 @@ public class ASTAssembler {
 							continue tokenLoop;
 						}
 
-					} else if (var.identTokenPosition > tokenCTR && paramVar == null) {
+					} else if (var.identTokenPosition > tokenCTR && paramVar == null && inheritedVar == null) {
 						Main.error(filename, token.lineNumber, token.charNumber, "Variable used before declared.");
 						skipToEndOfLine();
 						continue tokenLoop;
@@ -658,6 +675,9 @@ public class ASTAssembler {
 					// Let's make sure this isn't the function definition. If it is, we have indexed
 					// the function's body earlier, so we can safely skip it now. If not, then this
 					// is a function call statement.
+
+					if (inheritedFunc != null)
+						function = inheritedFunc;
 
 					if (function.identTokenPosition == tokenCTR) {
 						// It's the definition.
@@ -802,6 +822,16 @@ public class ASTAssembler {
 					if (v.identifier.identifier.equals(((LaiLexer.Identifier) expToken).value)) {
 						var = v;
 						break;
+					}
+				}
+			}
+			if (var == null) {
+				for (ArrayList<LaiVariable> list : variableScope) {
+					for (LaiVariable v : list) {
+						if (v.identifier.identifier.equals(((LaiLexer.Identifier) expToken).value)) {
+							var = v;
+							break;
+						}
 					}
 				}
 			}
@@ -1086,6 +1116,7 @@ public class ASTAssembler {
 
 	private LaiContents parseContent(String filename, ArrayList<LaiLexer.Token> tokens, LaiList<LaiVariable> params,
 			LaiFunction this_function) {
+
 		if (params == null) {
 			params = new LaiList<LaiVariable>("LaiVariable");
 		}
@@ -1098,6 +1129,9 @@ public class ASTAssembler {
 		this.parseVariablesAndFunctionsToContent(filename, tokens, contents, this_function);
 		this.parseStatements(filename, tokens, contents, params, this_function);
 
+		functionScope.add(contents.functions.list_children);
+		variableScope.add(contents.variables.list_children);
+
 		for (LaiFunction f : contents.functions.list_children) {
 
 			// A buffer of semicolons to prevent off by one errors
@@ -1109,6 +1143,9 @@ public class ASTAssembler {
 
 			f.resetNodeReferences();
 		}
+
+		functionScope.remove(contents.functions.list_children);
+		variableScope.remove(contents.variables.list_children);
 
 		return contents;
 	}

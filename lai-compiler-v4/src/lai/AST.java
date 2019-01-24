@@ -11,12 +11,13 @@ public class AST {
 		public Node node_parent;
 		public ArrayList<Node> node_children;
 
+		public static final int maxLayers = 10;
+
 		protected Node() {
 			node_children = new ArrayList<Node>();
 		}
 
 		protected String getDSFromList(int layer, ArrayList<Node> c) {
-
 			String out = Main.getIndents(layer) + this.getDebugName() + "\n";
 			for (Node n : c) {
 				out += n.getDebugString(layer + 1);
@@ -26,6 +27,8 @@ public class AST {
 		}
 
 		public String getDebugString(int layer) {
+			if (layer > maxLayers)
+				return Main.getIndents(layer) + getDebugName() + "...Max recursion depth reached.";
 			return getDSFromList(layer, node_children);
 		}
 
