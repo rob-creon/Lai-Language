@@ -11,9 +11,6 @@ public class ASTAssembler {
 
 	public ArrayList<LaiFile> files;
 
-	private ArrayList<LaiFunction> globalFunctions;
-	private ArrayList<LaiVariable> globalVariables;
-
 	private ArrayList<ArrayList<AST.LaiFunction>> functionScope;
 	private ArrayList<ArrayList<AST.LaiVariable>> variableScope;
 
@@ -25,8 +22,6 @@ public class ASTAssembler {
 
 	public ASTAssembler() {
 		files = new ArrayList<LaiFile>();
-		globalFunctions = new ArrayList<AST.LaiFunction>();
-		globalVariables = new ArrayList<AST.LaiVariable>();
 
 		functionScope = new ArrayList<ArrayList<AST.LaiFunction>>();
 		variableScope = new ArrayList<ArrayList<AST.LaiVariable>>();
@@ -217,7 +212,7 @@ public class ASTAssembler {
 						LaiFunction function = new LaiFunction(new LaiIdentifier(ident.value), parameters,
 								funcReturnType, ident_token_location, false);
 						if (this_function == null) {
-							globalFunctions.add(function);
+							// globalFunctions.add(function);
 						}
 
 						contents.functions.addChild(function);
@@ -359,9 +354,12 @@ public class ASTAssembler {
 					// Skip to the end of the line
 					skipToEndOfLine();
 				} else {
+					skipToEndOfLine();
 					continue;
 				}
 			}
+
+			skipToEndOfLine();
 		}
 	}
 
@@ -370,8 +368,6 @@ public class ASTAssembler {
 
 		this.tokens = tokens;
 		this.filename = filename;
-
-		// functionScope.addAll(c);
 
 		if (params == null) {
 			// Prevent null exceptions
@@ -385,7 +381,78 @@ public class ASTAssembler {
 				continue;
 			}
 
-			if (token.type == LaiLexer.TokenType.KeywordCExtern) {
+			if (token.type == LaiLexer.TokenType.StatementIf) {
+				// Next token should be (
+				if (!safeNextToken())
+					continue tokenLoop;
+				if (token.type != TokenType.OpOpenParenthesis) {
+					Main.error(filename, token.lineNumber, token.charNumber,
+							"Expected a '(' but got a '" + token.type.name + "' instead.");
+					skipToEndOfLine();
+					continue tokenLoop;
+				}
+
+				// Next token is the beginning of an expression.
+				if (!safeNextToken())
+					continue tokenLoop;
+
+				int parenCount = 1;
+				int expressionStart = tokenCTR;
+				int expressionEnd = -1;
+				while (parenCount != 0) {
+					if (!safeNextToken())
+						continue tokenLoop;
+
+					if (token.type == TokenType.OpCloseParenthesis) {
+						parenCount--;
+					}
+					if (token.type == TokenType.OpOpenParenthesis) {
+						parenCount++;
+					}
+					if (parenCount == 0) {
+						expressionEnd = tokenCTR;
+						break;
+					}
+				}
+				LaiExpression boolExp = parseExpression(filename, tokens, contents, params, expressionStart,
+						expressionEnd);
+				if (boolExp == null) {
+					Main.error(filename, token.lineNumber, token.charNumber, "Couldn't parse expression.");
+				}
+				tokenCTR = expressionEnd;
+				///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+				// Next token is the beginning of an expression.
+				if (!safeNextToken())
+					continue tokenLoop;
+
+				// Now we need to get the contents of the if loop.
+				int braceCount = 1;
+				ArrayList<LaiLexer.Token> ifTokens = new ArrayList<LaiLexer.Token>();
+				while (nextToken() != TokenContext.END) {
+					if (token.type == TokenType.OpOpenBrace) {
+						braceCount++;
+					}
+					if (token.type == TokenType.OpCloseBrace) {
+						braceCount--;
+					}
+					if (braceCount == 0) {
+						break;
+					}
+					ifTokens.add(token);
+				}
+				// We ended on }.
+				if (nextToken() == TokenContext.END)
+					continue tokenLoop;
+
+				LaiContents ifContents = new LaiContents();
+				ifContents = parseContent(filename, ifTokens, params, this_function);
+
+				LaiStatementIf ifStatement = new LaiStatementIf(boolExp, ifContents);
+				contents.statements.addChild(ifStatement);
+				continue tokenLoop;
+
+			} else if (token.type == LaiLexer.TokenType.KeywordCExtern) {
 				if (this_function != null) {
 					this_function.isCImport = true;
 				} else {
@@ -921,6 +988,12 @@ public class ASTAssembler {
 			ArrayList<LaiLexer.TokenType> operators = new ArrayList<LaiLexer.TokenType>();
 			ArrayList<Integer> precedence = new ArrayList<Integer>();
 
+			operators.add(TokenType.OpBoolEqual);
+			precedence.add(0);
+
+			operators.add(TokenType.OpBoolNotEqual);
+			precedence.add(0);
+
 			operators.add(TokenType.OpMathPlus);
 			precedence.add(0);
 
@@ -992,6 +1065,12 @@ public class ASTAssembler {
 						case OpMathDivide:
 							expOp = new LaiExpressionDivide(expA, expB);
 							break;
+						case OpBoolEqual:
+							expOp = new LaiExpressionBoolEquals(expA, expB);
+							break;
+						case OpBoolNotEqual:
+							expOp = new LaiExpressionBoolNotEquals(expA, expB);
+							break;
 						default:
 							System.err.println("unsupported op");
 							break;
@@ -1044,6 +1123,12 @@ public class ASTAssembler {
 							case OpMathDivide:
 								expOp = new LaiExpressionDivide(expA, expB);
 								break;
+							case OpBoolEqual:
+								expOp = new LaiExpressionBoolEquals(expA, expB);
+								break;
+							case OpBoolNotEqual:
+								expOp = new LaiExpressionBoolNotEquals(expA, expB);
+								break;
 							default:
 								System.err.println("unsupported op");
 								break;
@@ -1087,6 +1172,12 @@ public class ASTAssembler {
 						break;
 					case OpMathDivide:
 						expOp = new LaiExpressionDivide(expA, expB);
+						break;
+					case OpBoolEqual:
+						expOp = new LaiExpressionBoolEquals(expA, expB);
+						break;
+					case OpBoolNotEqual:
+						expOp = new LaiExpressionBoolNotEquals(expA, expB);
 						break;
 					default:
 						System.err.println("unsupported op");

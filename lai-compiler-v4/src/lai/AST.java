@@ -170,7 +170,7 @@ public class AST {
 		}
 
 		public static enum Type {
-			LaiInteger, LaiString, LaiChar, LaiTypeUnknown,
+			LaiInteger, LaiString, LaiChar, LaiTypeBoolean, LaiTypeUnknown,
 		}
 
 		public Type type;
@@ -298,7 +298,31 @@ public class AST {
 			this.node_children.add(var);
 			this.node_children.add(exp);
 		}
+	}
 
+	public static class LaiStatementIf extends LaiStatement {
+
+		public LaiExpression expression;
+		public LaiContents contents;
+
+		public LaiStatementIf(LaiExpression exp, LaiContents contents) {
+			this.expression = exp;
+			this.contents = contents;
+
+			this.node_children.add(exp);
+			this.node_children.add(contents);
+		}
+
+		@Override
+		protected String getDebugName() {
+			return "<LaiIfStatement>";
+		}
+
+		@Override
+		public void resetNodeReferences() {
+			this.node_children.add(expression);
+			this.node_children.add(contents);
+		}
 	}
 
 	public static class LaiIdentifier extends Node {
@@ -557,6 +581,40 @@ public class AST {
 		@Override
 		protected String getDebugName() {
 			return "<LaiExpressionDivide>";
+		}
+	}
+
+	public static class LaiExpressionBoolEquals extends LaiExpressionBasicMath {
+
+		public LaiExpressionBoolEquals(LaiExpression expA, LaiExpression expB) {
+			super(expA, expB);
+		}
+
+		@Override
+		protected String getDebugName() {
+			return "<LaiExpressionBoolEquals>";
+		}
+
+		@Override
+		protected LaiType getDefaultReturnType() {
+			return new LaiType(LaiType.Type.LaiTypeBoolean);
+		}
+	}
+
+	public static class LaiExpressionBoolNotEquals extends LaiExpressionBasicMath {
+
+		public LaiExpressionBoolNotEquals(LaiExpression expA, LaiExpression expB) {
+			super(expA, expB);
+		}
+
+		@Override
+		protected String getDebugName() {
+			return "<LaiExpressionBoolNotEquals>";
+		}
+
+		@Override
+		protected LaiType getDefaultReturnType() {
+			return new LaiType(LaiType.Type.LaiTypeBoolean);
 		}
 	}
 

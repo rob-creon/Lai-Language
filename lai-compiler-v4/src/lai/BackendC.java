@@ -5,14 +5,19 @@ import java.util.ArrayList;
 import lai.AST.LaiContents;
 import lai.AST.LaiExpression;
 import lai.AST.LaiExpressionAddition;
+import lai.AST.LaiExpressionBoolEquals;
+import lai.AST.LaiExpressionBoolNotEquals;
+import lai.AST.LaiExpressionDivide;
 import lai.AST.LaiExpressionIntLiteral;
 import lai.AST.LaiExpressionMinus;
+import lai.AST.LaiExpressionMultiply;
 import lai.AST.LaiExpressionStringLiteral;
 import lai.AST.LaiExpressionVariable;
 import lai.AST.LaiFile;
 import lai.AST.LaiFunction;
 import lai.AST.LaiStatement;
 import lai.AST.LaiStatementFunctionCall;
+import lai.AST.LaiStatementIf;
 import lai.AST.LaiStatementSetVar;
 import lai.AST.LaiType;
 import lai.AST.LaiVariable;
@@ -130,30 +135,57 @@ public class BackendC extends Backend {
 			LaiStatementSetVar SetVar = (LaiStatementSetVar) statement;
 			output += getVariableName(SetVar.var) + " = " + parseExpression(SetVar.exp);
 			return output;
+		} else if (statement instanceof LaiStatementIf) {
+			LaiStatementIf IfState = (LaiStatementIf) statement;
+			output += "if(" + parseExpression(IfState.expression) + "){" + parseContents(IfState.contents, false) + "}";
+			return output;
 		}
 
 		return "unknown statement";
+
 	}
 
 	private String parseExpression(LaiExpression expression) {
+
+		String output = "(";
+
 		if (expression instanceof LaiExpressionStringLiteral) {
 			LaiExpressionStringLiteral stringLiteral = (LaiExpressionStringLiteral) expression;
-			return "\"" + stringLiteral.literalValue + "\"";
+			output += "\"" + stringLiteral.literalValue + "\"";
 		} else if (expression instanceof LaiExpressionIntLiteral) {
 			LaiExpressionIntLiteral intLiteral = (LaiExpressionIntLiteral) expression;
-			return "" + intLiteral.literalValue;
+			output += "" + intLiteral.literalValue;
+			//////////////////////////////////////
 		} else if (expression instanceof LaiExpressionAddition) {
 			LaiExpressionAddition addition = (LaiExpressionAddition) expression;
-			return parseExpression(addition.expA) + " + " + parseExpression(addition.expB);
+			output += parseExpression(addition.expA) + " + " + parseExpression(addition.expB);
 		} else if (expression instanceof LaiExpressionMinus) {
 			LaiExpressionMinus addition = (LaiExpressionMinus) expression;
-			return parseExpression(addition.expA) + " - " + parseExpression(addition.expB);
+			output += parseExpression(addition.expA) + " - " + parseExpression(addition.expB);
+		} else if (expression instanceof LaiExpressionMultiply) {
+			LaiExpressionMultiply addition = (LaiExpressionMultiply) expression;
+			output += parseExpression(addition.expA) + " * " + parseExpression(addition.expB);
+		} else if (expression instanceof LaiExpressionDivide) {
+			LaiExpressionDivide addition = (LaiExpressionDivide) expression;
+			output += parseExpression(addition.expA) + " / " + parseExpression(addition.expB);
+			//////////////////////////////////////
+		} else if (expression instanceof LaiExpressionBoolEquals) {
+			LaiExpressionBoolEquals addition = (LaiExpressionBoolEquals) expression;
+			output += parseExpression(addition.expA) + " == " + parseExpression(addition.expB);
+		} else if (expression instanceof LaiExpressionBoolNotEquals) {
+			LaiExpressionBoolNotEquals addition = (LaiExpressionBoolNotEquals) expression;
+			output += parseExpression(addition.expA) + " != " + parseExpression(addition.expB);
 		} else if (expression instanceof LaiExpressionVariable) {
 			LaiExpressionVariable var = (LaiExpressionVariable) expression;
-			return getVariableName(var.var);
+			output += getVariableName(var.var);
+
+		} else {
+			output += "unknown expression";
 		}
 
-		return "unknown expression";
+		output += ")";
+		return output;
+
 	}
 
 	private String getGlobalVariableDeclarations(LaiContents contents) {

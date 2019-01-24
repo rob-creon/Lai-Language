@@ -88,7 +88,7 @@ public class LaiLexer {
 				// This is an operator token, so we can put it in the list for parsing operators
 				// by name.
 				OPERATOR_TOKENS.add(this);
-			}
+			} 
 		}
 
 		private TokenType(String name) {
