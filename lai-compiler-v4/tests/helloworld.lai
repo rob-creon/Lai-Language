@@ -1,7 +1,9 @@
-print(print_stream : string) : int {_import_C printf;}
-print_i1(print_stream : string, arg1 : int) : int {_import_C printf;}
-print_i2(print_stream : string, arg1 : int, arg2 : int) : int {_import_C printf;}
-shell(shell_stream : string) : int {_import_C system;}
+print(print_stream : string) : int { _import_C printf; }
+print_i1(print_stream : string, arg1 : int) : int { _import_C printf; }
+print_i2(print_stream : string, arg1 : int, arg2 : int) : int { _import_C printf; }
+shell(shell_stream : string) : int { _import_C system; }
+
+
 
 printSum(argA : int, argB : int) : int {
 	print_i2("%d + %d", argA, argB)
@@ -13,11 +15,16 @@ printSum(argA : int, argB : int) : int {
 	print("\n")
 }
 
-
-
 recursiveMultiply(Av:int,Bv:int):int{
 	
 	tick(Av, 0, Bv)
+	//print_i1("%d")
+	
+	globalVar = 0;
+	
+	localFunc():int{
+		
+	}
 	
 	tick(A:int, sumSoFar:int, ctr:int):int{
 		print("Tick: ")
@@ -28,11 +35,12 @@ recursiveMultiply(Av:int,Bv:int):int{
 		
 		ctr = ctr - 1
 		
-		//tick(A, sumSoFar, ctr)
+		//localFunc()
+		tick(A, sumSoFar, ctr)
+	}
 }
-	
-	
-}
+
+globalVar : int = 100
 
 print("Hello World\n")
 printSum(5, 6)
