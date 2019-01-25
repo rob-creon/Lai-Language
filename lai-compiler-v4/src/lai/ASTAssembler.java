@@ -381,7 +381,25 @@ public class ASTAssembler {
 				continue;
 			}
 
-			if (token.type == LaiLexer.TokenType.StatementIf) {
+			if (token.type == LaiLexer.TokenType.StatementReturn) {
+				// Next token is the beginning of expression.
+				if (!safeNextToken())
+					continue tokenLoop;
+
+				int expStart = tokenCTR;
+				while (nextToken() != TokenContext.END) {
+					if (token.type == TokenType.OpSemicolon) {
+						break;
+					}
+				}
+
+				LaiExpression exp = parseExpression(filename, tokens, contents, params, expStart, tokenCTR);
+				contents.statements.addChild(new AST.LaiStatementReturnStatement(exp));
+				skipToEndOfLine();
+				continue tokenLoop;
+
+			} else if (token.type == LaiLexer.TokenType.StatementIf) {
+
 				// Next token should be (
 				if (!safeNextToken())
 					continue tokenLoop;
@@ -420,7 +438,6 @@ public class ASTAssembler {
 					Main.error(filename, token.lineNumber, token.charNumber, "Couldn't parse expression.");
 				}
 				tokenCTR = expressionEnd;
-				///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 				// Next token is the beginning of an expression.
 				if (!safeNextToken())
@@ -878,12 +895,30 @@ public class ASTAssembler {
 
 		if (expToken instanceof LaiLexer.Identifier) {
 			LaiVariable var = null;
+			LaiFunction func = null;
+			for (ArrayList<LaiFunction> list : functionScope) {
+				for (LaiFunction f : list) {
+					if (f.identifier.identifier.equals(((LaiLexer.Identifier) expToken).value)) {
+						func = f;
+						break;
+					}
+				}
+			}
+			if (func == null) {
+				for (LaiFunction f : contents.functions.list_children) {
+					if (f.identifier.identifier.equals(((LaiLexer.Identifier) expToken).value)) {
+						func = f;
+						break;
+					}
+				}
+			}
 			for (LaiVariable v : parameters.list_children) {
 				if (v.identifier.identifier.equals(((LaiLexer.Identifier) expToken).value)) {
 					var = v;
 					break;
 				}
 			}
+
 			if (var == null) {
 				for (LaiVariable v : contents.variables.list_children) {
 					if (v.identifier.identifier.equals(((LaiLexer.Identifier) expToken).value)) {
@@ -902,20 +937,123 @@ public class ASTAssembler {
 					}
 				}
 			}
-			if (var == null) {
+			if (func != null && var != null) {
+				Main.error(filename, expToken.lineNumber, expToken.charNumber, "Identifier '"
+						+ ((LaiLexer.Identifier) expToken).value + "' is defined as both a function and variable.");
+				return null;
+			}
+			if (var == null && func == null) {
 				Main.error(filename, expToken.lineNumber, expToken.charNumber,
 						"Can not find variable '" + ((LaiLexer.Identifier) expToken).value + "'.");
 				return null;
 			}
 
-			// We have now found the variable that this identifier references.
-			if (var.type.type == Type.LaiTypeUnknown) {
-				Main.error(filename, expToken.lineNumber, expToken.charNumber,
-						"Type inferences can not rely on variables of unknown type.");
-				return null;
-			}
+			if (var != null) {
+				// We have now found the variable that this identifier references.
+				if (var.type.type == Type.LaiTypeUnknown) {
+					Main.error(filename, expToken.lineNumber, expToken.charNumber,
+							"Type inferences can not rely on variables of unknown type.");
+					return null;
+				}
 
-			return new LaiExpressionVariable(var);
+				return new LaiExpressionVariable(var);
+			} else {
+				// We have found the function that this identifier references.
+				if (func.identTokenPosition == tokenCTR) {
+					// It's the definition.
+					// The LaiFunction object contains the token contents of the function body, so
+					// we can use the size of that to know how many tokens to skip. However, that is
+					// starting from the { of the function dec. So let's find that first.
+
+					while (token.type != TokenType.OpOpenBrace) {
+						if (!safeNextToken())
+							return null;
+					}
+
+					tokenCTR += func.bodyTokens.size() + 1;
+					token = tokens.get(tokenCTR);
+					// Below is a convenient way of double checking this.
+//					Main.error(filename, token.lineNumber, token.charNumber,
+//							"This is where the function ends. We added " + function.bodyTokens.size()
+//									+ " tokens to tokenCTR.");
+					return null;
+				}
+
+				// This is a function call statement. That means
+				// that its return value doesn't matter because it is being used as a statement
+				// like such: "foo();" rather than "var = foo();". All we have to do is parse
+				// the params.
+
+				// Check that there are ().
+				if (!safeNextToken())
+					return null;
+				if (token.type != TokenType.OpOpenParenthesis) {
+					Main.error(filename, token.lineNumber, token.charNumber,
+							"Expected a '(' but got a '" + token.type.name + "' instead.");
+					skipToEndOfLine();
+					return null;
+				}
+
+				// Skip the (
+				if (!safeNextToken())
+					return null;
+				// We need to find the parameter expressions, splitting by comma.
+				int numParams = func.params.list_children.size();
+				LaiList<LaiExpression> functionParams = new LaiList<LaiExpression>("LaiExpression");
+
+				int currentExpressionStart = tokenCTR;
+				int currentExpressionEnd;
+				while (token.type != TokenType.OpCloseParenthesis) {
+
+					// safe
+					token = tokens.get(tokenCTR);
+					if (token.type == TokenType.OpCloseParenthesis) {
+						break;
+					}
+
+					if (!safeNextToken())
+						return null;
+
+					if (token.type == TokenType.OpComma || token.type == TokenType.OpCloseParenthesis) {
+						currentExpressionEnd = tokenCTR;
+						functionParams.addChild(parseExpression(filename, tokens, contents, parameters,
+								currentExpressionStart, currentExpressionEnd));
+
+						// Parse expression doesn't end in the right place. We need to correct the
+						// tokenCTR.
+						tokenCTR = currentExpressionEnd;
+
+						// Now we can reset the expression markers.
+						currentExpressionStart = tokenCTR + 1;
+						currentExpressionEnd = -2; // I want an error if this value is used. I used -2 because -1 is
+													// the way to make the parseExpression function just go until
+													// reaching a ;.
+
+					}
+				}
+
+				if (numParams != functionParams.list_children.size()) {
+					Main.error(filename, token.lineNumber, token.charNumber, "Expected " + numParams
+							+ " arguments, but found " + functionParams.list_children.size() + ".");
+					return null;
+				}
+				// We need to type check the params.
+				for (int argumentID = 0; argumentID < numParams; argumentID++) {
+
+					LaiType.Type foundType = functionParams.list_children.get(argumentID).returnType.type;
+					LaiType.Type expectedType = func.params.list_children.get(argumentID).type.type;
+
+					if (foundType != expectedType) {
+						Main.error(filename, token.lineNumber, token.charNumber,
+								"Argument mismatch on argument (id=" + argumentID + ", where id starts at 0). Expected "
+										+ expectedType.name() + ", but got " + foundType.name() + " instead.");
+						return null;
+					}
+				}
+
+				// Now that we have the params, we can create the function call expression.
+				return new LaiExpressionFunctionCall(func, functionParams);
+			}
 
 		} else {
 

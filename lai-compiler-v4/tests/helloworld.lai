@@ -24,6 +24,8 @@ recursiveMultiply(va:int,vb:int):int{
 			myFunction(ctr + 1,a,b)
 		}
 	}
+	
+	return 5
 }
 
 globalVar : int = 100

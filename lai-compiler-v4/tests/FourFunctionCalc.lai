@@ -1,0 +1,29 @@
+print(print_stream : string) : int { _import_C printf; }
+print_i1(print_stream : string, arg1 : int) : int { _import_C printf; }
+print_i2(print_stream : string, arg1 : int, arg2 : int) : int { _import_C printf; }
+
+FirstNum 	:= 1600
+SecondNum	:= 400
+
+print_i2("Numbers are: %d, %d\n", FirstNum, SecondNum)
+
+print_i1("Sum: %d\n", getSum(FirstNum, SecondNum))
+print_i1("Difference: %d\n", getDifference(FirstNum, SecondNum))
+print_i1("Product: %d\n", getProduct(FirstNum, SecondNum))
+print_i1("Quotient: %d\n", getQuotient(FirstNum, SecondNum))
+
+getSum(a:int,b:int) : int {
+	return a + b;
+}
+
+getDifference(a:int,b:int) : int {
+	return a - b;
+}
+
+getProduct(a:int, b:int) : int {
+	return a * b;
+}
+
+getQuotient(a:int,b:int) : int {
+	return a / b;
+}

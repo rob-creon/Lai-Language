@@ -618,6 +618,39 @@ public class AST {
 		}
 	}
 
+	public static class LaiExpressionFunctionCall extends LaiExpression {
+
+		public LaiFunction function;
+		public LaiList<LaiExpression> params;
+
+		public LaiExpressionFunctionCall(LaiFunction function, LaiList<LaiExpression> functionParams) {
+			this.function = function;
+			this.params = functionParams;
+			this.returnType = function.returnType;
+
+			super.addChild(function);
+			super.addChild(params);
+		}
+
+		@Override
+		protected LaiType getDefaultReturnType() {
+			return new LaiType(LaiType.Type.LaiTypeUnknown);
+		}
+
+		@Override
+		protected String getDebugName() {
+			return "<LaiExpressionFunctionCall>";
+		}
+
+		@Override
+		public void resetNodeReferences() {
+			this.node_children.clear();
+			super.addChild(function);
+			super.addChild(params);
+		}
+
+	}
+
 	public static class LaiStatementFunctionCall extends LaiStatement {
 
 		public LaiFunction function;
@@ -642,6 +675,26 @@ public class AST {
 			super.addChild(function);
 			super.addChild(params);
 		}
+	}
 
+	public static class LaiStatementReturnStatement extends LaiStatement {
+
+		public LaiExpression exp;
+
+		public LaiStatementReturnStatement(LaiExpression exp) {
+			this.exp = exp;
+			addChild(exp);
+		}
+
+		@Override
+		protected String getDebugName() {
+			return "<LaiStatementReturnStatement>";
+		}
+
+		@Override
+		public void resetNodeReferences() {
+			this.node_children.clear();
+			addChild(exp);
+		}
 	}
 }

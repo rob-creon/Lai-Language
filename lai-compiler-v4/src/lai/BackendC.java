@@ -8,6 +8,7 @@ import lai.AST.LaiExpressionAddition;
 import lai.AST.LaiExpressionBoolEquals;
 import lai.AST.LaiExpressionBoolNotEquals;
 import lai.AST.LaiExpressionDivide;
+import lai.AST.LaiExpressionFunctionCall;
 import lai.AST.LaiExpressionIntLiteral;
 import lai.AST.LaiExpressionMinus;
 import lai.AST.LaiExpressionMultiply;
@@ -18,6 +19,7 @@ import lai.AST.LaiFunction;
 import lai.AST.LaiStatement;
 import lai.AST.LaiStatementFunctionCall;
 import lai.AST.LaiStatementIf;
+import lai.AST.LaiStatementReturnStatement;
 import lai.AST.LaiStatementSetVar;
 import lai.AST.LaiType;
 import lai.AST.LaiVariable;
@@ -43,7 +45,7 @@ public class BackendC extends Backend {
 
 		switch (t) {
 		case LaiInteger:
-			return "int16_t";
+			return "int32_t";
 		case LaiChar:
 			return "unsigned char";
 		case LaiString:
@@ -139,8 +141,15 @@ public class BackendC extends Backend {
 			LaiStatementIf IfState = (LaiStatementIf) statement;
 			output += "if(" + parseExpression(IfState.expression) + "){" + parseContents(IfState.contents, false) + "}";
 			return output;
+		} else if (statement instanceof LaiStatementReturnStatement) {
+			LaiStatementReturnStatement Ret = (LaiStatementReturnStatement) statement;
+			output += "return " + parseExpression(Ret.exp);
+			return output;
 		}
 
+		if (!output.equals("")) {
+			System.out.println("YOU FORGOT A RETURN AGAIN");
+		}
 		return "unknown statement";
 
 	}
@@ -178,7 +187,16 @@ public class BackendC extends Backend {
 		} else if (expression instanceof LaiExpressionVariable) {
 			LaiExpressionVariable var = (LaiExpressionVariable) expression;
 			output += getVariableName(var.var);
-
+		} else if (expression instanceof LaiExpressionFunctionCall) {
+			LaiExpressionFunctionCall call = (LaiExpressionFunctionCall) expression;
+			output += getFunctionName(call.function) + "(";
+			for (int i = 0; i < call.params.list_children.size(); ++i) {
+				output += parseExpression(call.params.list_children.get(i));
+				if (i != call.params.list_children.size() - 1) {
+					output += ", ";
+				}
+			}
+			output += ")";
 		} else {
 			output += "unknown expression";
 		}

@@ -1,0 +1,8 @@
+print(print_stream : string) : int { _import_C printf; }
+print_i1(print_stream : string, arg1 : int) : int { _import_C printf; }
+
+function() : int {
+	return 5
+}
+
+print_i1("the number is %d",function())
