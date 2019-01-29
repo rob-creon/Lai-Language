@@ -3,16 +3,40 @@ package lai;
 import java.util.ArrayList;
 import java.util.Stack;
 
-import lai.AST.*;
-import lai.AST.LaiType.Type;
 import lai.LaiLexer.TokenType;
+import lai.ast.LaiContents;
+import lai.ast.LaiExpression;
+import lai.ast.LaiExpressionAddition;
+import lai.ast.LaiExpressionBasicMath;
+import lai.ast.LaiExpressionBoolEquals;
+import lai.ast.LaiExpressionBoolNotEquals;
+import lai.ast.LaiExpressionCharLiteral;
+import lai.ast.LaiExpressionDivide;
+import lai.ast.LaiExpressionFunctionCall;
+import lai.ast.LaiExpressionIntLiteral;
+import lai.ast.LaiExpressionMinus;
+import lai.ast.LaiExpressionMultiply;
+import lai.ast.LaiExpressionStringLiteral;
+import lai.ast.LaiExpressionUninitialized;
+import lai.ast.LaiExpressionVariable;
+import lai.ast.LaiFile;
+import lai.ast.LaiFunction;
+import lai.ast.LaiIdentifier;
+import lai.ast.LaiList;
+import lai.ast.LaiStatementFunctionCall;
+import lai.ast.LaiStatementIf;
+import lai.ast.LaiStatementReturn;
+import lai.ast.LaiStatementSetVar;
+import lai.ast.LaiType;
+import lai.ast.LaiType.Type;
+import lai.ast.LaiVariable;
 
 public class ASTAssembler {
 
 	public ArrayList<LaiFile> files;
 
-	private ArrayList<ArrayList<AST.LaiFunction>> functionScope;
-	private ArrayList<ArrayList<AST.LaiVariable>> variableScope;
+	private ArrayList<ArrayList<LaiFunction>> functionScope;
+	private ArrayList<ArrayList<LaiVariable>> variableScope;
 
 	private int tokenCTR = 0;
 	private LaiLexer.Token token;
@@ -23,8 +47,8 @@ public class ASTAssembler {
 	public ASTAssembler() {
 		files = new ArrayList<LaiFile>();
 
-		functionScope = new ArrayList<ArrayList<AST.LaiFunction>>();
-		variableScope = new ArrayList<ArrayList<AST.LaiVariable>>();
+		functionScope = new ArrayList<ArrayList<LaiFunction>>();
+		variableScope = new ArrayList<ArrayList<LaiVariable>>();
 	}
 
 	private enum TokenContext {
@@ -152,11 +176,11 @@ public class ASTAssembler {
 											"Expected type but got '" + token.type.name() + "' instead.");
 								}
 								// This is the parameter's return type.
-								AST.LaiType paramType = AST.LaiType.convertLexerTypeToLaiType(token);
+								LaiType paramType = LaiType.convertLexerTypeToLaiType(token);
 
 								// Now we can assemble the variable and add it to the parameters list of the
 								// function.
-								parameters.addChild(new AST.LaiVariable(paramIdent, paramType, ident_token_location));
+								parameters.addChild(new LaiVariable(paramIdent, paramType, ident_token_location));
 
 								// Check if the next thing is a comma, close parenthesis, or something invalid.
 								if (!safeNextToken())
@@ -207,7 +231,7 @@ public class ASTAssembler {
 									"Expected function return type, but got '" + token.type.name + "' instead.");
 							continue tokenLoop;
 						}
-						LaiType funcReturnType = AST.LaiType.convertLexerTypeToLaiType(token);
+						LaiType funcReturnType = LaiType.convertLexerTypeToLaiType(token);
 
 						LaiFunction function = new LaiFunction(new LaiIdentifier(ident.value), parameters,
 								funcReturnType, ident_token_location, false);
@@ -394,7 +418,7 @@ public class ASTAssembler {
 				}
 
 				LaiExpression exp = parseExpression(filename, tokens, contents, params, expStart, tokenCTR);
-				contents.statements.addChild(new AST.LaiStatementReturnStatement(exp));
+				contents.statements.addChild(new LaiStatementReturn(exp));
 				skipToEndOfLine();
 				continue tokenLoop;
 
@@ -561,9 +585,8 @@ public class ASTAssembler {
 				 * (function == null && this_function != null) { // Recursively check up the
 				 * tree for the function ArrayList<LaiFunction> inheritedFuncs = new
 				 * ArrayList<LaiFunction>(); Node n = this_function.node_parent; while (n !=
-				 * null) { if (n instanceof AST.LaiContents)
-				 * inheritedFuncs.addAll(((AST.LaiContents) n).functions.list_children); n =
-				 * n.node_parent; }
+				 * null) { if (n instanceof LaiContents) inheritedFuncs.addAll((( LaiContents)
+				 * n).functions.list_children); n = n.node_parent; }
 				 * 
 				 * for (LaiFunction f : inheritedFuncs) { if
 				 * (f.identifier.identifier.equals(((LaiLexer.Identifier) token).value)) {
@@ -622,7 +645,7 @@ public class ASTAssembler {
 							// Parse the expression and create the statement.
 							LaiExpression exp = parseExpression(filename, tokens, contents, params, tokenCTR, -1);
 
-							if (var.type.type != AST.LaiType.Type.LaiTypeUnknown) {
+							if (var.type.type != LaiType.Type.LaiTypeUnknown) {
 								Main.error(filename, token.lineNumber, token.charNumber, "The variable '"
 										+ var.identifier.identifier
 										+ "' was already type inferred. Cannot type infer a variable multiple times.");
@@ -633,8 +656,8 @@ public class ASTAssembler {
 							// variable's type now.
 							var.type.type = exp.getReturnType().type;
 
-							if (!(exp instanceof LaiExpressionUninit)) {
-								contents.statements.addChild(new AST.LaiStatementSetVar(var, exp));
+							if (!(exp instanceof LaiExpressionUninitialized)) {
+								contents.statements.addChild(new LaiStatementSetVar(var, exp));
 							}
 
 							skipToEndOfLine();
@@ -662,7 +685,7 @@ public class ASTAssembler {
 								// Parse the expression and create the statement.
 								LaiExpression exp = parseExpression(filename, tokens, contents, params, tokenCTR, -1);
 
-								if (!(exp instanceof LaiExpressionUninit)) {
+								if (!(exp instanceof LaiExpressionUninitialized)) {
 									// Check the types match.
 									if (exp.returnType.type != var.type.type) {
 
@@ -672,7 +695,7 @@ public class ASTAssembler {
 										skipToEndOfLine();
 										continue tokenLoop;
 									}
-									contents.statements.addChild(new AST.LaiStatementSetVar(var, exp));
+									contents.statements.addChild(new LaiStatementSetVar(var, exp));
 								}
 
 								skipToEndOfLine();
@@ -685,24 +708,24 @@ public class ASTAssembler {
 
 								switch (var.type.type) {
 								case LaiInteger:
-									literal = new AST.LaiExpressionIntLiteral(0);
+									literal = new LaiExpressionIntLiteral(0);
 									break;
 								case LaiString:
-									literal = new AST.LaiExpressionStringLiteral(""); // Empty non-null string
+									literal = new LaiExpressionStringLiteral(""); // Empty non-null string
 									break;
 								case LaiChar:
-									literal = new AST.LaiExpressionCharLiteral('\u0000'); // Java code for null
-																							// character,
-																							// often displayed as a
-																							// square
-																							// or space in the terminal.
+									literal = new LaiExpressionCharLiteral('\u0000'); // Java code for null
+																						// character,
+																						// often displayed as a
+																						// square
+																						// or space in the terminal.
 									break;
 								default:
 									Main.error(filename, token.lineNumber, token.charNumber,
 											"Type does not support default initialization.");
 									continue tokenLoop;
 								}
-								contents.statements.addChild(new AST.LaiStatementSetVar(var, literal));
+								contents.statements.addChild(new LaiStatementSetVar(var, literal));
 								skipToEndOfLine();
 								continue tokenLoop;
 							}
@@ -746,8 +769,8 @@ public class ASTAssembler {
 							skipToEndOfLine();
 							continue tokenLoop;
 						}
-						if (!(exp instanceof LaiExpressionUninit)) {
-							contents.statements.addChild(new AST.LaiStatementSetVar(var, exp));
+						if (!(exp instanceof LaiExpressionUninitialized)) {
+							contents.statements.addChild(new LaiStatementSetVar(var, exp));
 						}
 
 						skipToEndOfLine();
@@ -1118,7 +1141,7 @@ public class ASTAssembler {
 		// function call, variable reference, or literal.
 		if (expressionLength == 1) {
 			if (token.type == LaiLexer.TokenType.UnitializeValue) {
-				return new AST.LaiExpressionUninit();
+				return new LaiExpressionUninitialized();
 			}
 			return parseSingleTokenExpression(filename, token, contents, params);
 		} else {
@@ -1339,7 +1362,7 @@ public class ASTAssembler {
 			return treeStack.get(0);
 		}
 
-		// return new AST.LaiExpressionStringLiteral("idfk");
+		// return new LaiExpressionStringLiteral("idfk");
 
 	}
 

@@ -2,27 +2,27 @@ package lai;
 
 import java.util.ArrayList;
 
-import lai.AST.LaiContents;
-import lai.AST.LaiExpression;
-import lai.AST.LaiExpressionAddition;
-import lai.AST.LaiExpressionBoolEquals;
-import lai.AST.LaiExpressionBoolNotEquals;
-import lai.AST.LaiExpressionDivide;
-import lai.AST.LaiExpressionFunctionCall;
-import lai.AST.LaiExpressionIntLiteral;
-import lai.AST.LaiExpressionMinus;
-import lai.AST.LaiExpressionMultiply;
-import lai.AST.LaiExpressionStringLiteral;
-import lai.AST.LaiExpressionVariable;
-import lai.AST.LaiFile;
-import lai.AST.LaiFunction;
-import lai.AST.LaiStatement;
-import lai.AST.LaiStatementFunctionCall;
-import lai.AST.LaiStatementIf;
-import lai.AST.LaiStatementReturnStatement;
-import lai.AST.LaiStatementSetVar;
-import lai.AST.LaiType;
-import lai.AST.LaiVariable;
+import lai.ast.LaiContents;
+import lai.ast.LaiExpression;
+import lai.ast.LaiExpressionAddition;
+import lai.ast.LaiExpressionBoolEquals;
+import lai.ast.LaiExpressionBoolNotEquals;
+import lai.ast.LaiExpressionDivide;
+import lai.ast.LaiExpressionFunctionCall;
+import lai.ast.LaiExpressionIntLiteral;
+import lai.ast.LaiExpressionMinus;
+import lai.ast.LaiExpressionMultiply;
+import lai.ast.LaiExpressionStringLiteral;
+import lai.ast.LaiExpressionVariable;
+import lai.ast.LaiFile;
+import lai.ast.LaiFunction;
+import lai.ast.LaiStatement;
+import lai.ast.LaiStatementFunctionCall;
+import lai.ast.LaiStatementIf;
+import lai.ast.LaiStatementReturn;
+import lai.ast.LaiStatementSetVar;
+import lai.ast.LaiType;
+import lai.ast.LaiVariable;
 
 public class BackendC extends Backend {
 
@@ -141,8 +141,8 @@ public class BackendC extends Backend {
 			LaiStatementIf IfState = (LaiStatementIf) statement;
 			output += "if(" + parseExpression(IfState.expression) + "){" + parseContents(IfState.contents, false) + "}";
 			return output;
-		} else if (statement instanceof LaiStatementReturnStatement) {
-			LaiStatementReturnStatement Ret = (LaiStatementReturnStatement) statement;
+		} else if (statement instanceof LaiStatementReturn) {
+			LaiStatementReturn Ret = (LaiStatementReturn) statement;
 			output += "return " + parseExpression(Ret.exp);
 			return output;
 		}

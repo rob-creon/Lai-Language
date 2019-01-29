@@ -9,6 +9,8 @@ import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Scanner;
 
+import lai.ast.LaiFile;
+
 public class Main {
 
 	private static String getCarrotPointer(int offset) {
@@ -175,9 +177,9 @@ public class Main {
 		if (flags.contains("-ast")) {
 			System.out.println("\nAST:\n");
 			for (int i = 0; i < filenames.size(); ++i) {
-				AST.LaiFile file = ast.files.get(i);
+				LaiFile file = ast.files.get(i);
 				System.out.println(file.getDebugString(0));
-			} 
+			}
 
 		}
 
