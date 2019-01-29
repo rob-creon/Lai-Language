@@ -55,6 +55,13 @@ public class ASTAssembler {
 		SEMICOLON, END, NORMAL
 	}
 
+	/**
+	 * Increments forward a token.
+	 * 
+	 * @return the condition of the health of the current token. TokenContext.END ==
+	 *         the end of file, TokenContext.Semicolon == ;, TokenContext.Normal ==
+	 *         !End && !Semicolon
+	 */
 	private TokenContext nextToken() {
 		tokenCTR++;
 		if (tokenCTR >= tokens.size()) {
@@ -69,6 +76,12 @@ public class ASTAssembler {
 		}
 	}
 
+	/**
+	 * Increments forward a token.
+	 * 
+	 * @return If the next token is normal, returns true. Otherwise, either EoF or
+	 *         ;, returns false.
+	 */
 	private boolean safeNextToken() {
 		if (nextToken() != TokenContext.NORMAL) {
 			Main.error(filename, token.lineNumber, token.charNumber, "Unexpected end.");
@@ -77,6 +90,9 @@ public class ASTAssembler {
 		return true;
 	}
 
+	/**
+	 * Skips tokenCTR forward until the token pointer is on a semicolon
+	 */
 	private void skipToEndOfLine() {
 		// Skip to the end of the line
 		while (token.type != LaiLexer.TokenType.OpSemicolon) {
@@ -86,6 +102,17 @@ public class ASTAssembler {
 		}
 	}
 
+	/**
+	 * Identifies all variable and function declarations. This is don for the sake
+	 * of forward declaring functions.
+	 * 
+	 * @param filename      of current file
+	 * @param tokens        of the contents we are parsing
+	 * @param               contents, the contents we are parsing that variable and
+	 *                      functions should be inserted into
+	 * @param this_function if we are inside a function, then this is the function
+	 *                      we are in, otherwise this should be null
+	 */
 	private void parseVariablesAndFunctionsToContent(String filename, ArrayList<LaiLexer.Token> tokens,
 			LaiContents contents, LaiFunction this_function) {
 		this.tokens = tokens;
@@ -387,6 +414,17 @@ public class ASTAssembler {
 		}
 	}
 
+	/**
+	 * Convert statements to AST.
+	 * 
+	 * @param filename      file we are currently parsing
+	 * @param tokens        of the codeblock we are parsing
+	 * @param contents      representative of the codeblock we are parsing
+	 * @param params        If we are in a function, these are the parameters we
+	 *                      were given. Otherwise null.
+	 * @param this_function If we are in a function, this is the function we are in.
+	 *                      Otherwise null.
+	 */
 	private void parseStatements(String filename, ArrayList<LaiLexer.Token> tokens, LaiContents contents,
 			LaiList<LaiVariable> params, LaiFunction this_function) {
 
@@ -902,9 +940,10 @@ public class ASTAssembler {
 	 * Parse a single token expression. Either a variable, function call, or literal
 	 * value.
 	 * 
-	 * @param filename
-	 * @param expression
-	 * @return
+	 * @param filename   we are in
+	 * @param expression the single token expression
+	 * @param contents   the contents of the codeblock we are in
+	 * @return LaiExpression AST ready expression
 	 */
 	private LaiExpression parseSingleTokenExpression(String filename, LaiLexer.Token expToken, LaiContents contents,
 			LaiList<LaiVariable> parameters) {
@@ -1108,7 +1147,7 @@ public class ASTAssembler {
 	 * @param contents
 	 * @param params
 	 * @param expressionTokenLocationStart
-	 * @return
+	 * @return the AST ready expression
 	 */
 	private LaiExpression parseExpression(String filename, ArrayList<LaiLexer.Token> tokens, LaiContents contents,
 			LaiList<LaiVariable> params, int expressionTokenLocationStart, int expressionTokenLocationEnd) {
@@ -1366,6 +1405,15 @@ public class ASTAssembler {
 
 	}
 
+	/**
+	 * Parse a code block
+	 * 
+	 * @param filename
+	 * @param tokens
+	 * @param params
+	 * @param this_function
+	 * @return AST of the codeblock
+	 */
 	private LaiContents parseContent(String filename, ArrayList<LaiLexer.Token> tokens, LaiList<LaiVariable> params,
 			LaiFunction this_function) {
 
@@ -1402,6 +1450,12 @@ public class ASTAssembler {
 		return contents;
 	}
 
+	/**
+	 * Constructs the AST of a given file
+	 * 
+	 * @param filename
+	 * @param tokens   contents of the file
+	 */
 	public void assembleFile(String filename, ArrayList<LaiLexer.Token> tokens) {
 
 		this.tokens = tokens;
